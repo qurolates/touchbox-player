@@ -1,6 +1,7 @@
 #import "TBTrackListViewController.h"
 #import "TBPlayerManager.h"
 #import "TBFavoritesManager.h"
+#import "TBNowPlayingViewController.h"
 
 @implementation TBTrackListViewController
 
@@ -28,6 +29,9 @@
                  object:player.musicPlayer];
     [center addObserver:self selector:@selector(favoritesChanged:)
                    name:TBFavoritesDidChangeNotification object:nil];
+    self.navigationItem.rightBarButtonItem = [[[UIBarButtonItem alloc]
+        initWithTitle:@"Now Playing" style:UIBarButtonItemStyleBordered
+        target:self action:@selector(showNowPlaying:)] autorelease];
 
     UIBarButtonItem *previous = [[UIBarButtonItem alloc] initWithTitle:@"Previous"
         style:UIBarButtonItemStyleBordered target:self action:@selector(previousPressed:)];
@@ -110,6 +114,11 @@
 - (void)previousPressed:(id)sender { [[TBPlayerManager sharedManager] previous]; }
 - (void)playPausePressed:(id)sender { [[TBPlayerManager sharedManager] togglePlayPause]; }
 - (void)nextPressed:(id)sender { [[TBPlayerManager sharedManager] next]; }
+- (void)showNowPlaying:(id)sender {
+    TBNowPlayingViewController *controller = [[TBNowPlayingViewController alloc] init];
+    [self.navigationController pushViewController:controller animated:YES];
+    [controller release];
+}
 
 - (void)playbackChanged:(NSNotification *)notification {
     NSLog(@"Touchbox: playback state=%ld",

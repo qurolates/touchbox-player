@@ -4,6 +4,7 @@
 #import "TBArtistsViewController.h"
 #import "TBFavoritesViewController.h"
 #import "TBPlaylistsViewController.h"
+#import "TBLibraryManager.h"
 
 @implementation AppDelegate
 
@@ -39,6 +40,7 @@
 
     [self.window makeKeyAndVisible];
     NSLog(@"Touchbox: app launch complete");
+    [[TBLibraryManager sharedManager] beginLoadingLibrary];
 }
 
 - (void)dealloc {

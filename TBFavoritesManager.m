@@ -33,9 +33,17 @@ static NSString *const TBFavoritesDefaultsKey = @"TBFavoritePersistentIDs";
     NSString *key = [self keyForItem:item];
     if ([_persistentIDs containsObject:key]) {
         [_persistentIDs removeObject:key];
+        NSUInteger index;
+        for (index = 0; index < [_resolvedItems count]; index++) {
+            if ([[self keyForItem:[_resolvedItems objectAtIndex:index]] isEqualToString:key]) {
+                [_resolvedItems removeObjectAtIndex:index];
+                break;
+            }
+        }
         NSLog(@"Touchbox: favorite removed persistentID=%@", key);
     } else {
         [_persistentIDs addObject:key];
+        if (_resolvedItems) [_resolvedItems addObject:item];
         NSLog(@"Touchbox: favorite added persistentID=%@", key);
     }
     [[NSUserDefaults standardUserDefaults] setObject:_persistentIDs forKey:TBFavoritesDefaultsKey];
@@ -44,13 +52,20 @@ static NSString *const TBFavoritesDefaultsKey = @"TBFavoritePersistentIDs";
 }
 
 - (NSArray *)favoriteItemsFromSongs:(NSArray *)songs {
+    if (_resolvedItems != nil && _resolvedSongs == songs) return _resolvedItems;
+    [_resolvedItems release];
+    _resolvedItems = nil;
+    [_resolvedSongs release];
+    _resolvedSongs = [songs retain];
+
+    NSTimeInterval start = [NSDate timeIntervalSinceReferenceDate];
     NSMutableDictionary *itemsByID = [NSMutableDictionary dictionaryWithCapacity:[songs count]];
     NSUInteger index;
     for (index = 0; index < [songs count]; index++) {
         MPMediaItem *item = [songs objectAtIndex:index];
         [itemsByID setObject:item forKey:[self keyForItem:item]];
     }
-    NSMutableArray *items = [NSMutableArray array];
+    NSMutableArray *items = [NSMutableArray arrayWithCapacity:[_persistentIDs count]];
     NSMutableArray *validIDs = [NSMutableArray array];
     for (index = 0; index < [_persistentIDs count]; index++) {
         NSString *key = [_persistentIDs objectAtIndex:index];
@@ -67,11 +82,16 @@ static NSString *const TBFavoritesDefaultsKey = @"TBFavoritePersistentIDs";
         [[NSUserDefaults standardUserDefaults] setObject:_persistentIDs forKey:TBFavoritesDefaultsKey];
         [[NSUserDefaults standardUserDefaults] synchronize];
     }
-    return items;
+    _resolvedItems = [items mutableCopy];
+    NSLog(@"Touchbox timing: favorites initial resolve %.3f sec favorites=%lu",
+          [NSDate timeIntervalSinceReferenceDate] - start, (unsigned long)[_resolvedItems count]);
+    return _resolvedItems;
 }
 
 - (void)dealloc {
     [_persistentIDs release];
+    [_resolvedItems release];
+    [_resolvedSongs release];
     [super dealloc];
 }
 

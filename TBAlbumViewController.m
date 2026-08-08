@@ -17,8 +17,12 @@
     artworkView.contentMode = UIViewContentModeScaleAspectFit;
     NSArray *items = [_album objectForKey:TBAlbumItemsKey];
     if ([items count] > 0) {
+        NSTimeInterval artworkStart = [NSDate timeIntervalSinceReferenceDate];
         MPMediaItemArtwork *artwork = [[items objectAtIndex:0] valueForProperty:MPMediaItemPropertyArtwork];
         artworkView.image = [artwork imageWithSize:CGSizeMake(96, 96)];
+        NSLog(@"Touchbox timing: opened album artwork %.3f sec available=%@",
+              [NSDate timeIntervalSinceReferenceDate] - artworkStart,
+              artworkView.image ? @"YES" : @"NO");
     }
     [header addSubview:artworkView];
 

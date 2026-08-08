@@ -5,6 +5,8 @@ extern NSString *const TBFavoritesDidChangeNotification;
 
 @interface TBFavoritesManager : NSObject {
     NSMutableArray *_persistentIDs;
+    NSMutableArray *_resolvedItems;
+    NSArray *_resolvedSongs;
 }
 
 + (TBFavoritesManager *)sharedManager;
