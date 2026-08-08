@@ -3,6 +3,7 @@
 #import "TBAlbumViewController.h"
 #import "TBLoadingView.h"
 #import "TBNowPlayingViewController.h"
+#import "TBTheme.h"
 
 @implementation TBArtistsViewController
 
@@ -23,6 +24,7 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
+    [TBTheme styleTableView:self.tableView];
     self.navigationItem.rightBarButtonItem = [[[UIBarButtonItem alloc]
         initWithTitle:@"Player" style:UIBarButtonItemStyleBordered
         target:self action:@selector(showNowPlaying:)] autorelease];
@@ -34,6 +36,19 @@
             self.tableView.backgroundView = TBCreateLoadingView(@"Preparing Artists…");
             [[TBLibraryManager sharedManager] beginLoadingLibrary];
         }
+    }
+    if (_selectedArtist) {
+        UIView *header = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, 320, 54)] autorelease];
+        UILabel *label = [[[UILabel alloc] initWithFrame:CGRectMake(15, 7, 290, 40)] autorelease];
+        label.backgroundColor = [TBTheme backgroundColor];
+        label.textColor = [TBTheme primaryTextColor];
+        label.font = [TBTheme sectionTitleFont];
+        label.text = [NSString stringWithFormat:@"%@\n%lu albums",
+            [_selectedArtist objectForKey:TBArtistNameKey],
+            (unsigned long)[[self selectedAlbums] count]];
+        label.numberOfLines = 2;
+        [header addSubview:label];
+        self.tableView.tableHeaderView = header;
     }
 }
 
@@ -81,6 +96,11 @@
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:identifier];
     if (cell == nil) cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle
         reuseIdentifier:identifier] autorelease];
+    cell.backgroundColor = [TBTheme backgroundColor];
+    cell.textLabel.font = [TBTheme primaryFont];
+    cell.textLabel.textColor = [TBTheme primaryTextColor];
+    cell.detailTextLabel.font = [TBTheme secondaryFont];
+    cell.detailTextLabel.textColor = [TBTheme secondaryTextColor];
     if (_selectedArtist) {
         NSDictionary *album = [[self selectedAlbums] objectAtIndex:(NSUInteger)indexPath.row];
         cell.textLabel.text = [album objectForKey:TBAlbumTitleKey];

@@ -5,6 +5,7 @@
 #import "TBFavoritesViewController.h"
 #import "TBPlaylistsViewController.h"
 #import "TBLibraryManager.h"
+#import "TBTheme.h"
 
 @implementation AppDelegate
 
@@ -17,9 +18,9 @@
     [window release];
 
     UIViewController *roots[5];
-    roots[0] = [[TBSongsViewController alloc] init];
-    roots[1] = [[TBAlbumsViewController alloc] init];
-    roots[2] = [[TBArtistsViewController alloc] init];
+    roots[0] = [[TBAlbumsViewController alloc] init];
+    roots[1] = [[TBArtistsViewController alloc] init];
+    roots[2] = [[TBSongsViewController alloc] init];
     roots[3] = [[TBFavoritesViewController alloc] init];
     roots[4] = [[TBPlaylistsViewController alloc] init];
     NSMutableArray *controllers = [NSMutableArray arrayWithCapacity:5];
@@ -27,6 +28,8 @@
     for (index = 0; index < 5; index++) {
         UINavigationController *navigation = [[UINavigationController alloc]
             initWithRootViewController:roots[index]];
+        navigation.navigationBar.tintColor = [TBTheme accentColor];
+        navigation.toolbar.tintColor = [TBTheme accentColor];
         navigation.tabBarItem.title = roots[index].title;
         [controllers addObject:navigation];
         [navigation release];

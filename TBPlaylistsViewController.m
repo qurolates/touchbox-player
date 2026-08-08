@@ -3,6 +3,7 @@
 #import "TBTrackListViewController.h"
 #import "TBLoadingView.h"
 #import "TBNowPlayingViewController.h"
+#import "TBTheme.h"
 
 @implementation TBPlaylistsViewController
 
@@ -14,6 +15,7 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
+    [TBTheme styleTableView:self.tableView];
     self.navigationItem.rightBarButtonItem = [[[UIBarButtonItem alloc]
         initWithTitle:@"Player" style:UIBarButtonItemStyleBordered
         target:self action:@selector(showNowPlaying:)] autorelease];
@@ -53,6 +55,9 @@
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:identifier];
     if (cell == nil) cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle
         reuseIdentifier:identifier] autorelease];
+    cell.backgroundColor = [TBTheme backgroundColor];
+    cell.textLabel.font = [TBTheme primaryFont];
+    cell.textLabel.textColor = [TBTheme primaryTextColor];
     MPMediaPlaylist *playlist = [_playlists objectAtIndex:(NSUInteger)indexPath.row];
     NSString *name = [playlist valueForProperty:MPMediaPlaylistPropertyName];
     cell.textLabel.text = name ? name : @"Unknown Playlist";

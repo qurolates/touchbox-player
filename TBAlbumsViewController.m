@@ -5,6 +5,7 @@
 #import "TBAlbumGridCell.h"
 #import "TBArtworkCache.h"
 #import "TBNowPlayingViewController.h"
+#import "TBTheme.h"
 
 @implementation TBAlbumsViewController
 
@@ -16,6 +17,8 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
+    [TBTheme styleTableView:self.tableView];
+    self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
     self.navigationItem.rightBarButtonItem = [[[UIBarButtonItem alloc]
         initWithTitle:@"Player" style:UIBarButtonItemStyleBordered
         target:self action:@selector(showNowPlaying:)] autorelease];
@@ -58,6 +61,23 @@
 
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
     return [[_artistGroups objectAtIndex:(NSUInteger)section] objectForKey:TBArtistNameKey];
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section {
+    return 28.0f;
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
+    UIView *header = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, 320, 28)] autorelease];
+    header.backgroundColor = [TBTheme backgroundColor];
+    UILabel *label = [[[UILabel alloc] initWithFrame:CGRectMake(10, 3, 300, 22)] autorelease];
+    label.backgroundColor = [UIColor clearColor];
+    label.font = [TBTheme sectionTitleFont];
+    label.textColor = [TBTheme primaryTextColor];
+    label.lineBreakMode = UILineBreakModeTailTruncation;
+    label.text = [[_artistGroups objectAtIndex:(NSUInteger)section] objectForKey:TBArtistNameKey];
+    [header addSubview:label];
+    return header;
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {

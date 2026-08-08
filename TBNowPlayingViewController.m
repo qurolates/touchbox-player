@@ -1,6 +1,8 @@
 #import "TBNowPlayingViewController.h"
 #import "TBPlayerManager.h"
 #import "TBQueueViewController.h"
+#import "TBTheme.h"
+#import "TBIconFactory.h"
 
 @implementation TBNowPlayingViewController
 
@@ -25,47 +27,66 @@
 }
 
 - (UIButton *)buttonWithFrame:(CGRect)frame title:(NSString *)title action:(SEL)action {
-    UIButton *button = [UIButton buttonWithType:UIButtonTypeRoundedRect];
+    UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
     button.frame = frame;
+    button.titleLabel.font = [TBTheme metadataFont];
     [button setTitle:title forState:UIControlStateNormal];
+    [button setTitleColor:[TBTheme secondaryTextColor] forState:UIControlStateNormal];
+    [button setTitleColor:[TBTheme accentColor] forState:UIControlStateHighlighted];
     [button addTarget:self action:action forControlEvents:UIControlEventTouchUpInside];
+    [button addTarget:self action:@selector(controlPressed:) forControlEvents:UIControlEventTouchDown];
+    [button addTarget:self action:@selector(controlReleased:)
+        forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside |
+                         UIControlEventTouchCancel];
     [self.view addSubview:button];
     return button;
 }
 
+- (void)controlPressed:(UIButton *)button { button.alpha = 0.55f; }
+- (void)controlReleased:(UIButton *)button { button.alpha = 1.0f; }
+
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.view.backgroundColor = [UIColor whiteColor];
-    _artworkView = [[UIImageView alloc] initWithFrame:CGRectMake(65, 8, 190, 190)];
-    _artworkView.backgroundColor = [UIColor colorWithWhite:0.88f alpha:1.0f];
+    self.view.backgroundColor = [TBTheme backgroundColor];
+    self.navigationItem.rightBarButtonItem = [[[UIBarButtonItem alloc]
+        initWithTitle:@"Queue" style:UIBarButtonItemStyleBordered
+        target:self action:@selector(queuePressed:)] autorelease];
+    _artworkView = [[UIImageView alloc] initWithFrame:CGRectMake(50, 4, 220, 220)];
+    _artworkView.backgroundColor = [TBTheme placeholderColor];
+    _artworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(220, 220)];
     _artworkView.contentMode = UIViewContentModeScaleAspectFit;
     [self.view addSubview:_artworkView];
-    _titleLabel = [[self labelWithFrame:CGRectMake(15, 202, 290, 23)
-        font:[UIFont boldSystemFontOfSize:17.0f] color:[UIColor blackColor]] retain];
-    _artistLabel = [[self labelWithFrame:CGRectMake(15, 225, 290, 19)
-        font:[UIFont systemFontOfSize:14.0f] color:[UIColor darkGrayColor]] retain];
-    _albumLabel = [[self labelWithFrame:CGRectMake(15, 244, 290, 18)
-        font:[UIFont systemFontOfSize:13.0f] color:[UIColor grayColor]] retain];
-    _elapsedLabel = [[self labelWithFrame:CGRectMake(5, 270, 47, 20)
-        font:[UIFont systemFontOfSize:11.0f] color:[UIColor darkGrayColor]] retain];
-    _remainingLabel = [[self labelWithFrame:CGRectMake(268, 270, 47, 20)
-        font:[UIFont systemFontOfSize:11.0f] color:[UIColor darkGrayColor]] retain];
-    _progressSlider = [[UISlider alloc] initWithFrame:CGRectMake(48, 267, 224, 24)];
+    _titleLabel = [[self labelWithFrame:CGRectMake(15, 228, 290, 22)
+        font:[TBTheme sectionTitleFont] color:[TBTheme primaryTextColor]] retain];
+    _artistLabel = [[self labelWithFrame:CGRectMake(15, 250, 290, 18)
+        font:[TBTheme secondaryFont] color:[TBTheme secondaryTextColor]] retain];
+    _albumLabel = [[self labelWithFrame:CGRectMake(15, 268, 290, 17)
+        font:[TBTheme metadataFont] color:[TBTheme secondaryTextColor]] retain];
+    _elapsedLabel = [[self labelWithFrame:CGRectMake(4, 294, 46, 18)
+        font:[TBTheme metadataFont] color:[TBTheme secondaryTextColor]] retain];
+    _remainingLabel = [[self labelWithFrame:CGRectMake(270, 294, 46, 18)
+        font:[TBTheme metadataFont] color:[TBTheme secondaryTextColor]] retain];
+    _progressSlider = [[UISlider alloc] initWithFrame:CGRectMake(46, 290, 228, 24)];
     [_progressSlider addTarget:self action:@selector(seekStarted:)
         forControlEvents:UIControlEventTouchDown];
     [_progressSlider addTarget:self action:@selector(seekFinished:)
         forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside |
                          UIControlEventTouchCancel];
     [self.view addSubview:_progressSlider];
-    [self buttonWithFrame:CGRectMake(25, 300, 75, 42) title:@"Previous" action:@selector(previousPressed:)];
-    _playPauseButton = [[self buttonWithFrame:CGRectMake(122, 300, 76, 42)
-        title:@"Play" action:@selector(playPausePressed:)] retain];
-    [self buttonWithFrame:CGRectMake(220, 300, 75, 42) title:@"Next" action:@selector(nextPressed:)];
-    _shuffleButton = [[self buttonWithFrame:CGRectMake(8, 352, 94, 38)
-        title:@"Shuffle Off" action:@selector(shufflePressed:)] retain];
-    [self buttonWithFrame:CGRectMake(113, 352, 94, 38) title:@"Queue" action:@selector(queuePressed:)];
-    _repeatButton = [[self buttonWithFrame:CGRectMake(218, 352, 94, 38)
-        title:@"Repeat Off" action:@selector(repeatPressed:)] retain];
+    UIButton *previous = [self buttonWithFrame:CGRectMake(31, 318, 64, 44)
+        title:nil action:@selector(previousPressed:)];
+    [previous setImage:[TBIconFactory iconNamed:@"previous" active:NO] forState:UIControlStateNormal];
+    _playPauseButton = [[self buttonWithFrame:CGRectMake(128, 318, 64, 44)
+        title:nil action:@selector(playPausePressed:)] retain];
+    UIButton *next = [self buttonWithFrame:CGRectMake(225, 318, 64, 44)
+        title:nil action:@selector(nextPressed:)];
+    [next setImage:[TBIconFactory iconNamed:@"next" active:NO] forState:UIControlStateNormal];
+    _shuffleButton = [[self buttonWithFrame:CGRectMake(50, 370, 100, 36)
+        title:@"Shuffle" action:@selector(shufflePressed:)] retain];
+    _shuffleButton.imageEdgeInsets = UIEdgeInsetsMake(4, 0, 4, 8);
+    _repeatButton = [[self buttonWithFrame:CGRectMake(170, 370, 100, 36)
+        title:@"Repeat" action:@selector(repeatPressed:)] retain];
+    _repeatButton.imageEdgeInsets = UIEdgeInsetsMake(4, 0, 4, 8);
 
     NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
     MPMusicPlayerController *player = [TBPlayerManager sharedManager].musicPlayer;
@@ -111,7 +132,7 @@
 - (void)requestArtworkForItem:(MPMediaItem *)item {
     [_artworkKey release];
     _artworkKey = nil;
-    _artworkView.image = nil;
+    _artworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(220, 220)];
     if (!item) return;
     NSNumber *number = [item valueForProperty:MPMediaItemPropertyPersistentID];
     _artworkKey = [[NSString stringWithFormat:@"%llu", [number unsignedLongLongValue]] copy];
@@ -123,7 +144,7 @@
 - (void)loadArtwork:(NSDictionary *)request {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     MPMediaItemArtwork *artwork = [[request objectForKey:@"item"] valueForProperty:MPMediaItemPropertyArtwork];
-    UIImage *image = [artwork imageWithSize:CGSizeMake(190, 190)];
+    UIImage *image = [artwork imageWithSize:CGSizeMake(220, 220)];
     NSDictionary *result = [[NSDictionary alloc] initWithObjectsAndKeys:
         [request objectForKey:@"key"], @"key", (image ? image : [NSNull null]), @"image", nil];
     [self performSelectorOnMainThread:@selector(showArtwork:) withObject:result waitUntilDone:YES];
@@ -134,17 +155,24 @@
 - (void)showArtwork:(NSDictionary *)result {
     if (![_artworkKey isEqualToString:[result objectForKey:@"key"]]) return;
     id image = [result objectForKey:@"image"];
-    _artworkView.image = image == [NSNull null] ? nil : image;
+    if (image != [NSNull null]) _artworkView.image = image;
 }
 
 - (void)updateButtons {
     TBPlayerManager *manager = [TBPlayerManager sharedManager];
     BOOL playing = manager.musicPlayer.playbackState == MPMusicPlaybackStatePlaying;
-    [_playPauseButton setTitle:(playing ? @"Pause" : @"Play") forState:UIControlStateNormal];
-    [_shuffleButton setTitle:(manager.shuffleEnabled ? @"Shuffle On" : @"Shuffle Off")
+    [_playPauseButton setImage:[TBIconFactory iconNamed:(playing ? @"pause" : @"play") active:NO]
+                       forState:UIControlStateNormal];
+    [_shuffleButton setImage:[TBIconFactory iconNamed:@"shuffle" active:manager.shuffleEnabled]
+                     forState:UIControlStateNormal];
+    [_shuffleButton setTitleColor:(manager.shuffleEnabled ? [TBTheme accentColor] : [TBTheme secondaryTextColor])
+                         forState:UIControlStateNormal];
+    [_repeatButton setImage:[TBIconFactory iconNamed:@"repeat" active:manager.repeatOneEnabled]
                     forState:UIControlStateNormal];
-    [_repeatButton setTitle:(manager.repeatOneEnabled ? @"Repeat One" : @"Repeat Off")
+    [_repeatButton setTitle:(manager.repeatOneEnabled ? @"Repeat 1" : @"Repeat")
                    forState:UIControlStateNormal];
+    [_repeatButton setTitleColor:(manager.repeatOneEnabled ? [TBTheme accentColor] : [TBTheme secondaryTextColor])
+                        forState:UIControlStateNormal];
 }
 
 - (void)updateProgress {
@@ -183,7 +211,7 @@
 - (void)playerStateChanged:(NSNotification *)notification { [self updateButtons]; [self updateProgress]; }
 
 - (void)didReceiveMemoryWarning {
-    _artworkView.image = nil;
+    _artworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(220, 220)];
     [super didReceiveMemoryWarning];
 }
 

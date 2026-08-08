@@ -2,6 +2,8 @@
 #import "TBPlayerManager.h"
 #import "TBFavoritesManager.h"
 #import "TBNowPlayingViewController.h"
+#import "TBTheme.h"
+#import "TBIconFactory.h"
 
 @implementation TBTrackListViewController
 
@@ -19,6 +21,7 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
+    [TBTheme styleTableView:self.tableView];
     TBPlayerManager *player = [TBPlayerManager sharedManager];
     NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
     [center addObserver:self selector:@selector(playbackChanged:)
@@ -30,17 +33,20 @@
     [center addObserver:self selector:@selector(favoritesChanged:)
                    name:TBFavoritesDidChangeNotification object:nil];
     self.navigationItem.rightBarButtonItem = [[[UIBarButtonItem alloc]
-        initWithTitle:@"Now Playing" style:UIBarButtonItemStyleBordered
+        initWithTitle:@"Player" style:UIBarButtonItemStyleBordered
         target:self action:@selector(showNowPlaying:)] autorelease];
 
-    UIBarButtonItem *previous = [[UIBarButtonItem alloc] initWithTitle:@"Previous"
-        style:UIBarButtonItemStyleBordered target:self action:@selector(previousPressed:)];
-    UIBarButtonItem *playPause = [[UIBarButtonItem alloc] initWithTitle:@"Play"
-        style:UIBarButtonItemStyleBordered target:self action:@selector(playPausePressed:)];
+    UIBarButtonItem *previous = [[UIBarButtonItem alloc]
+        initWithImage:[TBIconFactory iconNamed:@"previous" active:NO]
+        style:UIBarButtonItemStylePlain target:self action:@selector(previousPressed:)];
+    UIBarButtonItem *playPause = [[UIBarButtonItem alloc]
+        initWithImage:[TBIconFactory iconNamed:@"play" active:NO]
+        style:UIBarButtonItemStylePlain target:self action:@selector(playPausePressed:)];
     self.playPauseButton = playPause;
     [playPause release];
-    UIBarButtonItem *next = [[UIBarButtonItem alloc] initWithTitle:@"Next"
-        style:UIBarButtonItemStyleBordered target:self action:@selector(nextPressed:)];
+    UIBarButtonItem *next = [[UIBarButtonItem alloc]
+        initWithImage:[TBIconFactory iconNamed:@"next" active:NO]
+        style:UIBarButtonItemStylePlain target:self action:@selector(nextPressed:)];
     UIBarButtonItem *space1 = [[UIBarButtonItem alloc]
         initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
     UIBarButtonItem *space2 = [[UIBarButtonItem alloc]
@@ -75,22 +81,33 @@
                                       reuseIdentifier:identifier] autorelease];
         favoriteButton = [UIButton buttonWithType:UIButtonTypeCustom];
         favoriteButton.frame = CGRectMake(0, 0, 44, 44);
-        favoriteButton.titleLabel.font = [UIFont systemFontOfSize:24.0f];
-        [favoriteButton setTitleColor:[UIColor darkGrayColor] forState:UIControlStateNormal];
         [favoriteButton addTarget:self action:@selector(favoritePressed:)
                  forControlEvents:UIControlEventTouchUpInside];
         cell.accessoryView = favoriteButton;
+        cell.textLabel.font = [TBTheme primaryFont];
+        cell.textLabel.textColor = [TBTheme primaryTextColor];
+        cell.detailTextLabel.font = [TBTheme secondaryFont];
+        cell.detailTextLabel.textColor = [TBTheme secondaryTextColor];
+        cell.backgroundColor = [TBTheme backgroundColor];
     } else {
         favoriteButton = (UIButton *)cell.accessoryView;
     }
     MPMediaItem *item = [_items objectAtIndex:(NSUInteger)indexPath.row];
     NSString *title = [item valueForProperty:MPMediaItemPropertyTitle];
     NSString *artist = [item valueForProperty:MPMediaItemPropertyArtist];
+    NSString *album = [item valueForProperty:MPMediaItemPropertyAlbumTitle];
     cell.textLabel.text = title ? title : @"Unknown Title";
-    cell.detailTextLabel.text = artist ? artist : @"Unknown Artist";
+    cell.detailTextLabel.text = [NSString stringWithFormat:@"%@ • %@",
+        artist ? artist : @"Unknown Artist", album ? album : @"Unknown Album"];
+    NSNumber *itemID = [item valueForProperty:MPMediaItemPropertyPersistentID];
+    NSNumber *playingID = [[TBPlayerManager sharedManager].musicPlayer.nowPlayingItem
+        valueForProperty:MPMediaItemPropertyPersistentID];
+    cell.imageView.image = (playingID && [itemID isEqualToNumber:playingID])
+        ? [TBIconFactory iconNamed:@"play" active:YES] : nil;
     favoriteButton.tag = indexPath.row;
-    NSString *star = [[TBFavoritesManager sharedManager] isFavoriteItem:item] ? @"★" : @"☆";
-    [favoriteButton setTitle:star forState:UIControlStateNormal];
+    BOOL favorite = [[TBFavoritesManager sharedManager] isFavoriteItem:item];
+    [favoriteButton setImage:[TBIconFactory iconNamed:@"star" active:favorite]
+                    forState:UIControlStateNormal];
     return cell;
 }
 
@@ -133,6 +150,7 @@
           [item valueForProperty:MPMediaItemPropertyTitle],
           [item valueForProperty:MPMediaItemPropertyArtist],
           [persistentID unsignedLongLongValue]);
+    [self.tableView reloadData];
 }
 
 - (void)favoritesChanged:(NSNotification *)notification {
@@ -141,9 +159,8 @@
 }
 
 - (void)updatePlayPauseButton {
-    self.playPauseButton.title =
-      ([TBPlayerManager sharedManager].musicPlayer.playbackState == MPMusicPlaybackStatePlaying)
-      ? @"Pause" : @"Play";
+    BOOL playing = [TBPlayerManager sharedManager].musicPlayer.playbackState == MPMusicPlaybackStatePlaying;
+    self.playPauseButton.image = [TBIconFactory iconNamed:(playing ? @"pause" : @"play") active:NO];
 }
 
 - (void)didReceiveMemoryWarning {

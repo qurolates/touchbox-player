@@ -1,6 +1,8 @@
 #import "TBAlbumGridCell.h"
 #import "TBLibraryManager.h"
 #import "TBArtworkCache.h"
+#import "TBTheme.h"
+#import "TBIconFactory.h"
 
 @implementation TBAlbumItemControl
 
@@ -11,21 +13,33 @@
     self = [super initWithFrame:frame];
     if (self) {
         _artworkView = [[UIImageView alloc] initWithFrame:CGRectMake(5, 0, 138, 138)];
-        _artworkView.backgroundColor = [UIColor colorWithWhite:0.88f alpha:1.0f];
+        _artworkView.backgroundColor = [TBTheme placeholderColor];
+        _artworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(138, 138)];
         _artworkView.contentMode = UIViewContentModeScaleAspectFit;
         [self addSubview:_artworkView];
         _titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(5, 140, 138, 18)];
-        _titleLabel.font = [UIFont boldSystemFontOfSize:13.0f];
+        _titleLabel.font = [TBTheme primaryFont];
+        _titleLabel.textColor = [TBTheme primaryTextColor];
+        _titleLabel.backgroundColor = [TBTheme backgroundColor];
         _titleLabel.lineBreakMode = UILineBreakModeTailTruncation;
         [self addSubview:_titleLabel];
         _artistLabel = [[UILabel alloc] initWithFrame:CGRectMake(5, 158, 138, 16)];
-        _artistLabel.font = [UIFont systemFontOfSize:11.0f];
-        _artistLabel.textColor = [UIColor grayColor];
+        _artistLabel.font = [TBTheme secondaryFont];
+        _artistLabel.textColor = [TBTheme secondaryTextColor];
+        _artistLabel.backgroundColor = [TBTheme backgroundColor];
         _artistLabel.lineBreakMode = UILineBreakModeTailTruncation;
         [self addSubview:_artistLabel];
+        [self addTarget:self action:@selector(showPressedState:)
+            forControlEvents:UIControlEventTouchDown];
+        [self addTarget:self action:@selector(clearPressedState:)
+            forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside |
+                             UIControlEventTouchCancel];
     }
     return self;
 }
+
+- (void)showPressedState:(id)sender { self.alpha = 0.58f; }
+- (void)clearPressedState:(id)sender { self.alpha = 1.0f; }
 
 - (void)configureWithAlbum:(NSDictionary *)album {
     [self resetContent];
@@ -56,7 +70,7 @@
 - (void)resetContent {
     self.album = nil;
     self.artworkKey = nil;
-    _artworkView.image = nil;
+    _artworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(138, 138)];
     _titleLabel.text = nil;
     _artistLabel.text = nil;
 }
@@ -78,6 +92,8 @@
     self = [super initWithStyle:style reuseIdentifier:identifier];
     if (self) {
         self.selectionStyle = UITableViewCellSelectionStyleNone;
+        self.backgroundColor = [TBTheme backgroundColor];
+        self.contentView.backgroundColor = [TBTheme backgroundColor];
         _leftItem = [[TBAlbumItemControl alloc] initWithFrame:CGRectMake(8, 3, 148, 176)];
         _rightItem = [[TBAlbumItemControl alloc] initWithFrame:CGRectMake(164, 3, 148, 176)];
         [self.contentView addSubview:_leftItem];
