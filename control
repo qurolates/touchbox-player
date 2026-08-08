@@ -1,0 +1,8 @@
+Package: com.touchbox.player
+Name: Touchbox
+Version: 0.0.1
+Architecture: iphoneos-arm
+Description: Touchbox music player proof of concept for iOS 4.1
+Maintainer: qura
+Author: qura
+Section: Applications
