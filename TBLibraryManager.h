@@ -19,6 +19,7 @@ extern NSString *const TBAlbumTrackRecordsKey;
     BOOL _loading;
     BOOL _mediaItemsReady;
     NSArray *_cachedSongIDs;
+    NSDictionary *_itemsByPersistentID;
 }
 
 + (TBLibraryManager *)sharedManager;
@@ -30,5 +31,6 @@ extern NSString *const TBAlbumTrackRecordsKey;
 - (BOOL)playlistsLoaded;
 - (BOOL)mediaItemsReady;
 - (void)beginLoadingLibrary;
+- (NSArray *)itemsForPersistentIDs:(NSArray *)persistentIDs;
 
 @end

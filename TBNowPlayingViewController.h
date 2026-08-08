@@ -11,6 +11,7 @@
     UIButton *_playPauseButton;
     UIButton *_shuffleButton;
     UIButton *_repeatButton;
+    UIButton *_favoriteButton;
     NSTimer *_progressTimer;
     BOOL _seeking;
     NSString *_artworkKey;

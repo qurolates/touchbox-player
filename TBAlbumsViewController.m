@@ -6,23 +6,54 @@
 #import "TBArtworkCache.h"
 #import "TBNowPlayingViewController.h"
 #import "TBTheme.h"
+#import "TBAlphabeticIndex.h"
+#import "TBAlphabetIndexView.h"
+#import "TBRecentViewController.h"
 
 @implementation TBAlbumsViewController
 
+@synthesize tableView = _tableView;
+
 - (id)init {
-    self = [super initWithStyle:UITableViewStylePlain];
+    self = [super init];
     if (self) self.title = @"Albums";
     return self;
+}
+
+- (void)loadView {
+    UIView *container = [[UIView alloc] initWithFrame:[[UIScreen mainScreen] applicationFrame]];
+    container.backgroundColor = [TBTheme backgroundColor];
+    self.view = container;
+    [container release];
+    UITableView *table = [[UITableView alloc] initWithFrame:CGRectMake(0, 0, 300,
+        self.view.bounds.size.height) style:UITableViewStylePlain];
+    table.autoresizingMask = UIViewAutoresizingFlexibleHeight;
+    table.dataSource = self;
+    table.delegate = self;
+    self.tableView = table;
+    [table release];
+    [self.view addSubview:self.tableView];
+    _alphabetIndexView = [[TBAlphabetIndexView alloc]
+        initWithFrame:CGRectMake(300, 0, 20, self.view.bounds.size.height)
+        titles:[TBAlphabeticIndex titles] target:self action:@selector(alphabetIndexSelected:)];
+    [self.view addSubview:_alphabetIndexView];
 }
 
 - (void)viewDidLoad {
     [super viewDidLoad];
     [TBTheme styleTableView:self.tableView];
     self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    _searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(0, 0, 300, 44)];
+    _searchBar.delegate = self; _searchBar.placeholder = @"Search Albums";
+    self.tableView.tableHeaderView = _searchBar;
     self.navigationItem.rightBarButtonItem = [[[UIBarButtonItem alloc]
         initWithTitle:@"Player" style:UIBarButtonItemStyleBordered
         target:self action:@selector(showNowPlaying:)] autorelease];
-    _artistGroups = [[[TBLibraryManager sharedManager] artistGroups] retain];
+    self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithTitle:@"Recent"
+        style:UIBarButtonItemStyleBordered target:self action:@selector(showRecent:)] autorelease];
+    _allArtistGroups = [[[TBLibraryManager sharedManager] artistGroups] retain];
+    _artistGroups = [_allArtistGroups retain];
+    _sectionIndexMap = [[TBAlphabeticIndex sectionMapForArtistGroups:_artistGroups] retain];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(indexReady:)
         name:TBLibraryIndexDidLoadNotification object:[TBLibraryManager sharedManager]];
     if (![[TBLibraryManager sharedManager] indexLoaded]) {
@@ -31,6 +62,8 @@
     }
 }
 
+- (void)showRecent:(id)sender { TBRecentViewController *controller = [[TBRecentViewController alloc] init]; [self.navigationController pushViewController:controller animated:YES]; [controller release]; }
+
 - (void)showNowPlaying:(id)sender {
     TBNowPlayingViewController *controller = [[TBNowPlayingViewController alloc] init];
     [self.navigationController pushViewController:controller animated:YES];
@@ -38,10 +71,35 @@
 }
 
 - (void)indexReady:(NSNotification *)notification {
-    [_artistGroups release];
-    _artistGroups = [[[TBLibraryManager sharedManager] artistGroups] retain];
+    [_allArtistGroups release]; _allArtistGroups = [[[TBLibraryManager sharedManager] artistGroups] retain];
+    [_artistGroups release]; _artistGroups = [_allArtistGroups retain];
+    [_sectionIndexMap release];
+    _sectionIndexMap = [[TBAlphabeticIndex sectionMapForArtistGroups:_artistGroups] retain];
     self.tableView.backgroundView = nil;
     [self.tableView reloadData];
+}
+
+- (void)searchBar:(UISearchBar *)searchBar textDidChange:(NSString *)query {
+    [_artistGroups release];
+    if (![query length]) _artistGroups = [_allArtistGroups retain];
+    else { NSMutableArray *groups = [NSMutableArray array]; NSUInteger g, a;
+        for (g = 0; g < [_allArtistGroups count]; g++) { NSDictionary *group = [_allArtistGroups objectAtIndex:g]; NSMutableArray *albums = [NSMutableArray array]; NSArray *source = [group objectForKey:TBAlbumsKey];
+            for (a = 0; a < [source count]; a++) { NSDictionary *album = [source objectAtIndex:a]; NSString *title = [album objectForKey:TBAlbumTitleKey]; NSString *artist = [album objectForKey:TBAlbumArtistKey];
+                if ([title rangeOfString:query options:(NSCaseInsensitiveSearch|NSDiacriticInsensitiveSearch)].location != NSNotFound || [artist rangeOfString:query options:(NSCaseInsensitiveSearch|NSDiacriticInsensitiveSearch)].location != NSNotFound) [albums addObject:album]; }
+            if ([albums count]) [groups addObject:[NSDictionary dictionaryWithObjectsAndKeys:[group objectForKey:TBArtistNameKey], TBArtistNameKey, albums, TBAlbumsKey, nil]];
+        } _artistGroups = [groups copy];
+    }
+    _alphabetIndexView.hidden = [query length] > 0; [self.tableView reloadData];
+}
+- (void)searchBarSearchButtonClicked:(UISearchBar *)bar { [bar resignFirstResponder]; }
+
+- (void)alphabetIndexSelected:(NSNumber *)indexNumber {
+    NSInteger index = [indexNumber integerValue];
+    if (index < 0 || index >= (NSInteger)[_sectionIndexMap count] || ![_artistGroups count]) return;
+    NSInteger section = [[_sectionIndexMap objectAtIndex:(NSUInteger)index] integerValue];
+    if (section >= 0 && section < (NSInteger)[_artistGroups count])
+        [self.tableView scrollToRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:section]
+            atScrollPosition:UITableViewScrollPositionTop animated:NO];
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -105,7 +163,7 @@
 }
 
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
-    return 180.0f;
+    return 175.0f;
 }
 
 - (void)albumItemPressed:(TBAlbumItemControl *)sender {
@@ -132,6 +190,11 @@
 - (void)dealloc {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     [_artistGroups release];
+    [_allArtistGroups release];
+    [_sectionIndexMap release];
+    [_tableView release];
+    [_alphabetIndexView release];
+    _searchBar.delegate = nil; [_searchBar release];
     [super dealloc];
 }
 

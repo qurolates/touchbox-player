@@ -5,6 +5,8 @@
 <dict>
 	<key>CFBundleDisplayName</key>
 	<string>Touchbox</string>
+    <key>CFBundleIconFile</key>
+    <string>icon.png</string>
     <key>CFBundleExecutable</key>
 	<string>Touchbox</string>
     <key>CFBundleIdentifier</key>
@@ -18,6 +20,8 @@
     <key>CFBundleVersion</key>
     <string>1.0</string>
     <key>LSRequiresIPhoneOS</key>
+    <true/>
+    <key>UIPrerenderedIcon</key>
     <true/>
 </dict>
 </plist>

@@ -24,6 +24,8 @@
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(nowPlayingChanged:)
         name:MPMusicPlayerControllerNowPlayingItemDidChangeNotification
         object:[TBPlayerManager sharedManager].musicPlayer];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(queueChanged:)
+        name:TBPlayerQueueDidChangeNotification object:[TBPlayerManager sharedManager]];
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
@@ -59,6 +61,7 @@
 }
 
 - (void)nowPlayingChanged:(NSNotification *)notification { [self.tableView reloadData]; }
+- (void)queueChanged:(NSNotification *)notification { [_items release]; _items = [[[TBPlayerManager sharedManager] queueItems] retain]; [self.tableView reloadData]; }
 
 - (void)dealloc {
     [[NSNotificationCenter defaultCenter] removeObserver:self];

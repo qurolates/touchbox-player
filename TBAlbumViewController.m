@@ -8,9 +8,11 @@
 @interface TBAlbumTrackCell : UITableViewCell {
     UILabel *_numberLabel;
     UILabel *_trackTitleLabel;
+    UILabel *_durationLabel;
     UIImageView *_playingMarker;
 }
-- (void)setNumber:(NSString *)number title:(NSString *)title playing:(BOOL)playing;
+- (void)setNumber:(NSString *)number title:(NSString *)title duration:(NSString *)duration
+          playing:(BOOL)playing;
 @end
 
 @implementation TBAlbumTrackCell
@@ -26,28 +28,47 @@
         [self.contentView addSubview:_numberLabel];
         _playingMarker = [[UIImageView alloc] initWithFrame:CGRectMake(44, 8, 28, 28)];
         [self.contentView addSubview:_playingMarker];
-        _trackTitleLabel = [[UILabel alloc] initWithFrame:CGRectMake(48, 0, 252, 44)];
+        _trackTitleLabel = [[UILabel alloc] initWithFrame:CGRectMake(48, 0, 210, 44)];
         _trackTitleLabel.backgroundColor = [UIColor clearColor];
         _trackTitleLabel.textColor = [TBTheme primaryTextColor];
         _trackTitleLabel.font = [TBTheme primaryFont];
         _trackTitleLabel.lineBreakMode = UILineBreakModeTailTruncation;
         [self.contentView addSubview:_trackTitleLabel];
+        _durationLabel = [[UILabel alloc] initWithFrame:CGRectMake(260, 0, 48, 44)];
+        _durationLabel.backgroundColor = [UIColor clearColor];
+        _durationLabel.textColor = [TBTheme secondaryTextColor];
+        _durationLabel.font = [TBTheme metadataFont];
+        _durationLabel.textAlignment = UITextAlignmentRight;
+        [self.contentView addSubview:_durationLabel];
     }
     return self;
 }
-- (void)setNumber:(NSString *)number title:(NSString *)title playing:(BOOL)playing {
+- (void)setNumber:(NSString *)number title:(NSString *)title duration:(NSString *)duration
+          playing:(BOOL)playing {
     _numberLabel.text = number;
     _playingMarker.image = playing ? [TBIconFactory iconNamed:@"play" active:YES] : nil;
-    _trackTitleLabel.frame = CGRectMake(playing ? 72 : 48, 0, playing ? 228 : 252, 44);
+    _trackTitleLabel.frame = CGRectMake(playing ? 72 : 48, 0, playing ? 186 : 210, 44);
     _trackTitleLabel.text = title;
+    _durationLabel.text = duration;
 }
 - (void)dealloc {
-    [_numberLabel release]; [_trackTitleLabel release]; [_playingMarker release];
+    [_numberLabel release]; [_trackTitleLabel release]; [_durationLabel release]; [_playingMarker release];
     [super dealloc];
 }
 @end
 
 @implementation TBAlbumViewController
+
+- (NSString *)durationString:(NSTimeInterval)duration {
+    if (duration < 0) duration = 0;
+    NSUInteger seconds = (NSUInteger)duration;
+    NSUInteger hours = seconds / 3600;
+    NSUInteger minutes = (seconds % 3600) / 60;
+    NSUInteger remainder = seconds % 60;
+    if (hours > 0) return [NSString stringWithFormat:@"%u:%02u:%02u",
+        (unsigned)hours, (unsigned)minutes, (unsigned)remainder];
+    return [NSString stringWithFormat:@"%u:%02u", (unsigned)(seconds / 60), (unsigned)remainder];
+}
 
 - (id)initWithAlbum:(NSDictionary *)album {
     self = [super initWithTitle:[album objectForKey:TBAlbumTitleKey]
@@ -61,6 +82,9 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
+    /* The generic track list installs Shuffle on the left. Album Detail needs
+       that slot for UINavigationController's automatic Back button. */
+    self.navigationItem.leftBarButtonItem = nil;
     [TBTheme styleTableView:self.tableView];
     UIView *header = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, 320, 246)] autorelease];
     header.backgroundColor = [TBTheme backgroundColor];
@@ -106,21 +130,13 @@
         : [NSString stringWithFormat:@"%lu tracks", (unsigned long)[self.items count]];
     [header addSubview:metadata];
     UIButton *play = [UIButton buttonWithType:UIButtonTypeCustom];
-    play.frame = CGRectMake(91, 209, 62, 32);
+    play.frame = CGRectMake(129, 209, 62, 32);
     play.titleLabel.font = [TBTheme secondaryFont];
     [play setTitle:@"Play" forState:UIControlStateNormal];
     [play setTitleColor:[TBTheme accentColor] forState:UIControlStateNormal];
     [play setTitleColor:[TBTheme secondaryTextColor] forState:UIControlStateHighlighted];
     [play addTarget:self action:@selector(playAlbum:) forControlEvents:UIControlEventTouchUpInside];
     [header addSubview:play];
-    UIButton *shuffle = [UIButton buttonWithType:UIButtonTypeCustom];
-    shuffle.frame = CGRectMake(167, 209, 62, 32);
-    shuffle.titleLabel.font = [TBTheme secondaryFont];
-    [shuffle setTitle:@"Shuffle" forState:UIControlStateNormal];
-    [shuffle setTitleColor:[TBTheme accentColor] forState:UIControlStateNormal];
-    [shuffle setTitleColor:[TBTheme secondaryTextColor] forState:UIControlStateHighlighted];
-    [shuffle addTarget:self action:@selector(shuffleAlbum:) forControlEvents:UIControlEventTouchUpInside];
-    [header addSubview:shuffle];
     self.tableView.tableHeaderView = header;
     [self requestAlbumArtwork];
 }
@@ -149,13 +165,8 @@
 }
 
 - (void)playAlbum:(id)sender {
-    if ([self.items count]) [[TBPlayerManager sharedManager]
-        playItems:self.items startingAtItem:[self.items objectAtIndex:0]];
-}
-
-- (void)shuffleAlbum:(id)sender {
-    [self playAlbum:sender];
-    [[TBPlayerManager sharedManager] toggleShuffle];
+    if ([self.items count]) { [[TBPlayerManager sharedManager]
+        playItems:self.items startingAtItem:[self.items objectAtIndex:0]]; [self showNowPlaying:nil]; }
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -169,8 +180,10 @@
     NSNumber *playingID = [[TBPlayerManager sharedManager].musicPlayer.nowPlayingItem
         valueForProperty:MPMediaItemPropertyPersistentID];
     NSString *trackTitle = [item valueForProperty:MPMediaItemPropertyTitle];
+    NSTimeInterval duration = [[item valueForProperty:MPMediaItemPropertyPlaybackDuration] doubleValue];
     [cell setNumber:[track unsignedIntegerValue] ? [track stringValue] : @""
               title:(trackTitle ? trackTitle : @"Unknown Title")
+           duration:[self durationString:duration]
             playing:(playingID && [itemID isEqualToNumber:playingID])];
     return cell;
 }

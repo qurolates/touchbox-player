@@ -1,4 +1,5 @@
 #import "TBLibraryManager.h"
+#import "TBRecentManager.h"
 
 NSString *const TBLibrarySongsDidLoadNotification = @"TBLibrarySongsDidLoadNotification";
 NSString *const TBLibraryIndexDidLoadNotification = @"TBLibraryIndexDidLoadNotification";
@@ -43,14 +44,22 @@ static NSInteger TBTrackSort(id left, id right, void *context) {
                                           options:NSCaseInsensitiveSearch];
 }
 
+static NSInteger TBSongTitleSort(id left, id right, void *context) {
+    NSString *leftTitle = [left valueForProperty:MPMediaItemPropertyTitle];
+    NSString *rightTitle = [right valueForProperty:MPMediaItemPropertyTitle];
+    NSComparisonResult result = [(leftTitle ? leftTitle : @"")
+        compare:(rightTitle ? rightTitle : @"") options:NSCaseInsensitiveSearch];
+    if (result != NSOrderedSame) return result;
+    NSString *leftArtist = [left valueForProperty:MPMediaItemPropertyArtist];
+    NSString *rightArtist = [right valueForProperty:MPMediaItemPropertyArtist];
+    return [(leftArtist ? leftArtist : @"") compare:(rightArtist ? rightArtist : @"")
+                                          options:NSCaseInsensitiveSearch];
+}
+
 static NSInteger TBNameDictionarySort(id left, id right, void *context) {
     NSString *key = (NSString *)context;
     return [[left objectForKey:key] compare:[right objectForKey:key]
                                    options:NSCaseInsensitiveSearch];
-}
-
-static NSInteger TBRecordIDSort(id left, id right, void *context) {
-    return [[left objectForKey:TBTrackIDKey] compare:[right objectForKey:TBTrackIDKey]];
 }
 
 @interface TBLibraryManager ()
@@ -102,10 +111,20 @@ static NSInteger TBRecordIDSort(id left, id right, void *context) {
     NSPropertyListFormat format = NSPropertyListBinaryFormat_v1_0;
     NSDictionary *root = [NSPropertyListSerialization propertyListFromData:data
         mutabilityOption:NSPropertyListImmutable format:&format errorDescription:&error];
-    if ([[root objectForKey:TBCacheVersionKey] integerValue] == 2 &&
+    NSInteger version = [[root objectForKey:TBCacheVersionKey] integerValue];
+    if ((version == 2 || version == 3) &&
         [root objectForKey:TBCacheGroupsKey] && [root objectForKey:TBCacheSongIDsKey]) {
         _artistGroups = [[root objectForKey:TBCacheGroupsKey] retain];
-        _cachedSongIDs = [[root objectForKey:TBCacheSongIDsKey] retain];
+        NSArray *storedSignature = [root objectForKey:TBCacheSongIDsKey];
+        if ([storedSignature count] && [[storedSignature objectAtIndex:0] isKindOfClass:[NSDictionary class]]) {
+            NSMutableArray *identifiers = [NSMutableArray arrayWithCapacity:[storedSignature count]];
+            NSUInteger index; for (index = 0; index < [storedSignature count]; index++) {
+                NSString *identifier = [[storedSignature objectAtIndex:index] objectForKey:TBTrackIDKey];
+                if (identifier) [identifiers addObject:identifier];
+            }
+            [identifiers sortUsingSelector:@selector(compare:)];
+            _cachedSongIDs = [identifiers copy];
+        } else _cachedSongIDs = [storedSignature retain];
         NSLog(@"Touchbox timing: persistent index load %.3f sec artists=%lu bytes=%lu",
               [NSDate timeIntervalSinceReferenceDate] - start,
               (unsigned long)[_artistGroups count], (unsigned long)[data length]);
@@ -130,12 +149,9 @@ static NSInteger TBRecordIDSort(id left, id right, void *context) {
         MPMediaItem *item = [songs objectAtIndex:index];
         NSString *identifier = TBPersistentIDString(item);
         [itemsByID setObject:item forKey:identifier];
-        NSString *albumArtist = [item valueForProperty:MPMediaItemPropertyAlbumArtist];
-        if ([albumArtist length] == 0) albumArtist = [item valueForProperty:MPMediaItemPropertyArtist];
-        if ([albumArtist length] == 0) albumArtist = @"Unknown Artist";
-        [signature addObject:[self recordForItem:item albumArtist:albumArtist]];
+        [signature addObject:identifier];
     }
-    [signature sortUsingFunction:TBRecordIDSort context:NULL];
+    [signature sortUsingSelector:@selector(compare:)];
     return signature;
 }
 
@@ -143,6 +159,7 @@ static NSInteger TBRecordIDSort(id left, id right, void *context) {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     NSTimeInterval totalStart = [NSDate timeIntervalSinceReferenceDate];
     NSTimeInterval stageStart = [NSDate timeIntervalSinceReferenceDate];
+    NSLog(@"Touchbox: songsQuery begin");
     MPMediaQuery *songsQuery = [MPMediaQuery songsQuery];
     NSLog(@"Touchbox timing: songs MPMediaQuery creation %.3f sec",
           [NSDate timeIntervalSinceReferenceDate] - stageStart);
@@ -151,12 +168,22 @@ static NSInteger TBRecordIDSort(id left, id right, void *context) {
     NSArray *songs = queriedSongs ? queriedSongs : [NSArray array];
     NSLog(@"Touchbox timing: songs items fetch %.3f sec count=%lu",
           [NSDate timeIntervalSinceReferenceDate] - stageStart, (unsigned long)[songs count]);
+    NSLog(@"Touchbox: songsQuery end songs count=%lu", (unsigned long)[songs count]);
+    stageStart = [NSDate timeIntervalSinceReferenceDate];
+    songs = [songs sortedArrayUsingFunction:TBSongTitleSort context:NULL];
+    NSLog(@"Touchbox timing: songs title sorting %.3f sec",
+          [NSDate timeIntervalSinceReferenceDate] - stageStart);
     @synchronized(self) { _songs = [songs retain]; }
     [self performSelectorOnMainThread:@selector(postSongsReady) withObject:nil waitUntilDone:NO];
 
     stageStart = [NSDate timeIntervalSinceReferenceDate];
     NSMutableDictionary *itemsByID = [NSMutableDictionary dictionaryWithCapacity:[songs count]];
     NSArray *currentSongIDs = [self signatureForSongs:songs itemsByID:itemsByID];
+    @synchronized(self) {
+        [_itemsByPersistentID release];
+        _itemsByPersistentID = [itemsByID copy];
+    }
+    [[TBRecentManager sharedManager] updateFirstSeenWithItems:songs];
     BOOL cacheMatches = (_cachedSongIDs != nil && [_cachedSongIDs isEqualToArray:currentSongIDs]);
     NSLog(@"Touchbox timing: library identity check %.3f sec changed=%@",
           [NSDate timeIntervalSinceReferenceDate] - stageStart, cacheMatches ? @"NO" : @"YES");
@@ -193,6 +220,17 @@ static NSInteger TBRecordIDSort(id left, id right, void *context) {
     NSLog(@"Touchbox timing: complete library preparation %.3f sec",
           [NSDate timeIntervalSinceReferenceDate] - totalStart);
     [pool drain];
+}
+
+- (NSArray *)itemsForPersistentIDs:(NSArray *)persistentIDs {
+    if (!_itemsByPersistentID || [persistentIDs count] == 0) return [NSArray array];
+    NSMutableArray *items = [NSMutableArray arrayWithCapacity:[persistentIDs count]];
+    NSUInteger index;
+    for (index = 0; index < [persistentIDs count]; index++) {
+        MPMediaItem *item = [_itemsByPersistentID objectForKey:[persistentIDs objectAtIndex:index]];
+        if (item) [items addObject:item];
+    }
+    return items;
 }
 
 - (NSDictionary *)recordForItem:(MPMediaItem *)item albumArtist:(NSString *)albumArtist {
@@ -333,7 +371,7 @@ static NSInteger TBRecordIDSort(id left, id right, void *context) {
             [group objectForKey:TBArtistNameKey], TBArtistNameKey, albums, TBAlbumsKey, nil]];
     }
     NSDictionary *root = [NSDictionary dictionaryWithObjectsAndKeys:
-        [NSNumber numberWithInt:2], TBCacheVersionKey, songIDs, TBCacheSongIDsKey,
+        [NSNumber numberWithInt:3], TBCacheVersionKey, songIDs, TBCacheSongIDsKey,
         cacheGroups, TBCacheGroupsKey, nil];
     NSString *error = nil;
     NSData *data = [NSPropertyListSerialization dataFromPropertyList:root
@@ -357,6 +395,7 @@ static NSInteger TBRecordIDSort(id left, id right, void *context) {
 
 - (void)dealloc {
     [_songs release]; [_artistGroups release]; [_playlists release]; [_cachedSongIDs release];
+    [_itemsByPersistentID release];
     [super dealloc];
 }
 

@@ -1,4 +1,7 @@
 #import "TBPlayerManager.h"
+#import "TBLibraryManager.h"
+
+NSString *const TBPlayerQueueDidChangeNotification = @"TBPlayerQueueDidChangeNotification";
 
 @implementation TBPlayerManager
 
@@ -9,6 +12,7 @@
 @synthesize repeatOneEnabled = _repeatOneEnabled;
 
 static NSString *const TBRepeatOneDefaultsKey = @"TBRepeatOneEnabled";
+static NSString *const TBPlaybackStateDefaultsKey = @"TBPlaybackState";
 
 + (TBPlayerManager *)sharedManager {
     static TBPlayerManager *manager = nil;
@@ -32,6 +36,8 @@ static NSString *const TBRepeatOneDefaultsKey = @"TBRepeatOneEnabled";
         [[NSNotificationCenter defaultCenter] addObserver:self
             selector:@selector(nowPlayingItemChanged:)
             name:MPMusicPlayerControllerNowPlayingItemDidChangeNotification object:_musicPlayer];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(libraryReady:)
+            name:TBLibraryIndexDidLoadNotification object:[TBLibraryManager sharedManager]];
     }
     return self;
 }
@@ -53,6 +59,18 @@ static NSString *const TBRepeatOneDefaultsKey = @"TBRepeatOneEnabled";
     _musicPlayer.nowPlayingItem = item;
     [_musicPlayer play];
     [self updateCurrentQueueIndex];
+    [self queueDidChange];
+}
+
+- (void)playItemsShuffled:(NSArray *)items {
+    if (![items count]) return;
+    NSMutableArray *shuffled = [NSMutableArray arrayWithArray:items];
+    NSUInteger count = [shuffled count];
+    while (count > 1) { NSUInteger other = arc4random() % count;
+        [shuffled exchangeObjectAtIndex:count - 1 withObjectAtIndex:other]; count--; }
+    [self playItems:shuffled startingAtItem:[shuffled objectAtIndex:0]];
+    [_originalQueueItems release]; _originalQueueItems = [items copy];
+    _shuffleEnabled = YES; [self queueDidChange];
 }
 
 - (void)togglePlayPause {
@@ -61,12 +79,13 @@ static NSString *const TBRepeatOneDefaultsKey = @"TBRepeatOneEnabled";
     } else {
         [_musicPlayer play];
     }
+    [self savePlaybackState];
 }
 
 - (void)previous { [_musicPlayer skipToPreviousItem]; }
 - (void)next { [_musicPlayer skipToNextItem]; }
 
-- (void)seekToTime:(NSTimeInterval)time { _musicPlayer.currentPlaybackTime = time; }
+- (void)seekToTime:(NSTimeInterval)time { _musicPlayer.currentPlaybackTime = time; [self savePlaybackState]; }
 
 - (NSString *)persistentIDForItem:(MPMediaItem *)item {
     NSNumber *number = [item valueForProperty:MPMediaItemPropertyPersistentID];
@@ -88,7 +107,21 @@ static NSString *const TBRepeatOneDefaultsKey = @"TBRepeatOneEnabled";
     _currentQueueIndex = [self indexOfItem:_musicPlayer.nowPlayingItem inItems:_queueItems];
 }
 
-- (void)nowPlayingItemChanged:(NSNotification *)notification { [self updateCurrentQueueIndex]; }
+- (void)nowPlayingItemChanged:(NSNotification *)notification { [self updateCurrentQueueIndex]; [self savePlaybackState]; }
+
+- (void)insertItem:(MPMediaItem *)item atIndex:(NSUInteger)index {
+    if (!item) return;
+    NSMutableArray *items = [NSMutableArray arrayWithArray:(_queueItems ? _queueItems : [NSArray array])];
+    NSInteger existing = [self indexOfItem:item inItems:items];
+    if (existing != NSNotFound) { [items removeObjectAtIndex:(NSUInteger)existing]; if ((NSUInteger)existing < index && index) index--; }
+    if (index > [items count]) index = [items count];
+    [items insertObject:item atIndex:index];
+    [self applyQueue:items keepingItem:_musicPlayer.nowPlayingItem];
+    [_originalQueueItems release]; _originalQueueItems = [items copy];
+    [self queueDidChange];
+}
+- (void)playNextItem:(MPMediaItem *)item { [self insertItem:item atIndex:(_currentQueueIndex == NSNotFound ? 0 : (NSUInteger)_currentQueueIndex + 1)]; }
+- (void)addItemToQueue:(MPMediaItem *)item { [self insertItem:item atIndex:[_queueItems count]]; }
 
 - (void)playQueueItemAtIndex:(NSInteger)index {
     if (index < 0 || index >= (NSInteger)[_queueItems count]) return;
@@ -133,6 +166,7 @@ static NSString *const TBRepeatOneDefaultsKey = @"TBRepeatOneEnabled";
         _shuffleEnabled = NO;
     }
     _musicPlayer.shuffleMode = MPMusicShuffleModeOff;
+    [self queueDidChange];
 }
 
 - (void)toggleRepeatOne {
@@ -140,6 +174,42 @@ static NSString *const TBRepeatOneDefaultsKey = @"TBRepeatOneEnabled";
     _musicPlayer.repeatMode = _repeatOneEnabled ? MPMusicRepeatModeOne : MPMusicRepeatModeNone;
     [[NSUserDefaults standardUserDefaults] setBool:_repeatOneEnabled forKey:TBRepeatOneDefaultsKey];
     [[NSUserDefaults standardUserDefaults] synchronize];
+    [self savePlaybackState];
+}
+
+- (void)queueDidChange {
+    [[NSNotificationCenter defaultCenter] postNotificationName:TBPlayerQueueDidChangeNotification object:self];
+    [self savePlaybackState];
+}
+
+- (void)savePlaybackState {
+    if (![_queueItems count]) return;
+    NSMutableArray *ids = [NSMutableArray arrayWithCapacity:[_queueItems count]]; NSUInteger i;
+    for (i = 0; i < [_queueItems count]; i++) [ids addObject:[self persistentIDForItem:[_queueItems objectAtIndex:i]]];
+    NSString *current = [self persistentIDForItem:_musicPlayer.nowPlayingItem];
+    NSDictionary *state = [NSDictionary dictionaryWithObjectsAndKeys:ids, @"queue", (current ? current : @""), @"current",
+        [NSNumber numberWithDouble:_musicPlayer.currentPlaybackTime], @"time", [NSNumber numberWithBool:_shuffleEnabled], @"shuffle",
+        [NSNumber numberWithBool:_repeatOneEnabled], @"repeat", [NSNumber numberWithInteger:_currentQueueIndex], @"queueIndex",
+        [NSNumber numberWithBool:(_musicPlayer.playbackState == MPMusicPlaybackStatePlaying)], @"wasPlaying",
+        @"TouchboxQueue", @"queueContext", nil];
+    [[NSUserDefaults standardUserDefaults] setObject:state forKey:TBPlaybackStateDefaultsKey];
+}
+
+- (void)libraryReady:(NSNotification *)notification {
+    if ([_queueItems count]) return;
+    NSDictionary *state = [[NSUserDefaults standardUserDefaults] objectForKey:TBPlaybackStateDefaultsKey];
+    NSArray *items = [[TBLibraryManager sharedManager] itemsForPersistentIDs:[state objectForKey:@"queue"]];
+    if (![items count]) return;
+    NSString *wanted = [state objectForKey:@"current"]; MPMediaItem *current = nil; NSUInteger i;
+    for (i = 0; i < [items count]; i++) if ([[self persistentIDForItem:[items objectAtIndex:i]] isEqualToString:wanted]) { current = [items objectAtIndex:i]; break; }
+    if (!current) current = [items objectAtIndex:0];
+    [_originalQueueItems release]; _originalQueueItems = [items copy]; [_queueItems release]; _queueItems = [items copy];
+    _shuffleEnabled = [[state objectForKey:@"shuffle"] boolValue]; _repeatOneEnabled = [[state objectForKey:@"repeat"] boolValue];
+    [_musicPlayer setQueueWithItemCollection:[MPMediaItemCollection collectionWithItems:items]]; _musicPlayer.nowPlayingItem = current;
+    NSTimeInterval time = [[state objectForKey:@"time"] doubleValue]; NSTimeInterval duration = [[current valueForProperty:MPMediaItemPropertyPlaybackDuration] doubleValue];
+    _musicPlayer.currentPlaybackTime = (duration > 0 && duration - time < 5.0) ? 0 : time;
+    _musicPlayer.repeatMode = _repeatOneEnabled ? MPMusicRepeatModeOne : MPMusicRepeatModeNone; [_musicPlayer pause];
+    [self updateCurrentQueueIndex]; [[NSNotificationCenter defaultCenter] postNotificationName:TBPlayerQueueDidChangeNotification object:self];
 }
 
 - (void)dealloc {

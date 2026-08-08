@@ -4,22 +4,42 @@
 #import "TBLoadingView.h"
 #import "TBNowPlayingViewController.h"
 #import "TBTheme.h"
+#import "TBAlphabeticIndex.h"
+#import "TBPlayerManager.h"
+#import "TBAlphabetIndexView.h"
 
 @implementation TBArtistsViewController
 
+@synthesize tableView = _tableView;
+
 - (id)init {
-    self = [super initWithStyle:UITableViewStylePlain];
+    self = [super init];
     if (self) self.title = @"Artists";
     return self;
 }
 
 - (id)initWithArtist:(NSDictionary *)artist {
-    self = [super initWithStyle:UITableViewStylePlain];
+    self = [super init];
     if (self) {
         _selectedArtist = [artist retain];
         self.title = [artist objectForKey:TBArtistNameKey];
     }
     return self;
+}
+
+- (void)loadView {
+    UIView *container = [[UIView alloc] initWithFrame:[[UIScreen mainScreen] applicationFrame]];
+    container.backgroundColor = [TBTheme backgroundColor]; self.view = container; [container release];
+    CGFloat width = _selectedArtist ? 320.0f : 300.0f;
+    UITableView *table = [[UITableView alloc] initWithFrame:CGRectMake(0, 0, width, self.view.bounds.size.height)
+        style:UITableViewStylePlain];
+    table.autoresizingMask = UIViewAutoresizingFlexibleHeight; table.dataSource = self; table.delegate = self;
+    self.tableView = table; [table release]; [self.view addSubview:self.tableView];
+    if (!_selectedArtist) {
+        _alphabetIndexView = [[TBAlphabetIndexView alloc] initWithFrame:CGRectMake(300, 0, 20, self.view.bounds.size.height)
+            titles:[TBAlphabeticIndex titles] target:self action:@selector(alphabetIndexSelected:)];
+        [self.view addSubview:_alphabetIndexView];
+    }
 }
 
 - (void)viewDidLoad {
@@ -31,13 +51,18 @@
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(indexReady:)
         name:TBLibraryIndexDidLoadNotification object:[TBLibraryManager sharedManager]];
     if (_selectedArtist == nil) {
-        _artistGroups = [[[TBLibraryManager sharedManager] artistGroups] retain];
+        _allArtistGroups = [[[TBLibraryManager sharedManager] artistGroups] retain];
+        _artistGroups = [_allArtistGroups retain];
+        _searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(0, 0, 300, 44)]; _searchBar.delegate = self; _searchBar.placeholder = @"Search Artists"; self.tableView.tableHeaderView = _searchBar;
+        _sectionIndexMap = [[TBAlphabeticIndex sectionMapForArtistGroups:_artistGroups] retain];
         if (![[TBLibraryManager sharedManager] indexLoaded]) {
             self.tableView.backgroundView = TBCreateLoadingView(@"Preparing Artists…");
             [[TBLibraryManager sharedManager] beginLoadingLibrary];
         }
     }
     if (_selectedArtist) {
+        self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithTitle:@"Shuffle"
+            style:UIBarButtonItemStyleBordered target:self action:@selector(shuffleArtist:)] autorelease];
         UIView *header = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, 320, 54)] autorelease];
         UILabel *label = [[[UILabel alloc] initWithFrame:CGRectMake(15, 7, 290, 40)] autorelease];
         label.backgroundColor = [TBTheme backgroundColor];
@@ -51,6 +76,18 @@
         self.tableView.tableHeaderView = header;
     }
 }
+
+- (void)shuffleArtist:(id)sender { NSMutableArray *items = [NSMutableArray array]; NSUInteger i; NSArray *albums = [self selectedAlbums]; for (i = 0; i < [albums count]; i++) [items addObjectsFromArray:[[albums objectAtIndex:i] objectForKey:TBAlbumItemsKey]]; if (![items count]) return; [[TBPlayerManager sharedManager] playItemsShuffled:items]; [self showNowPlaying:nil]; }
+
+- (void)searchBar:(UISearchBar *)searchBar textDidChange:(NSString *)query {
+    [_artistGroups release];
+    if (![query length]) _artistGroups = [_allArtistGroups retain];
+    else { NSMutableArray *results = [NSMutableArray array]; NSUInteger i; for (i = 0; i < [_allArtistGroups count]; i++) { NSDictionary *group = [_allArtistGroups objectAtIndex:i];
+        if ([[group objectForKey:TBArtistNameKey] rangeOfString:query options:(NSCaseInsensitiveSearch|NSDiacriticInsensitiveSearch)].location != NSNotFound) [results addObject:group]; } _artistGroups = [results copy]; }
+    [_sectionIndexMap release]; _sectionIndexMap = [[TBAlphabeticIndex sectionMapForArtistGroups:_artistGroups] retain]; [self.tableView reloadData];
+    _alphabetIndexView.hidden = [query length] > 0;
+}
+- (void)searchBarSearchButtonClicked:(UISearchBar *)bar { [bar resignFirstResponder]; }
 
 - (void)showNowPlaying:(id)sender {
     TBNowPlayingViewController *controller = [[TBNowPlayingViewController alloc] init];
@@ -72,8 +109,10 @@
             }
         }
     } else {
-        [_artistGroups release];
-        _artistGroups = [[[TBLibraryManager sharedManager] artistGroups] retain];
+        [_allArtistGroups release]; _allArtistGroups = [[[TBLibraryManager sharedManager] artistGroups] retain];
+        [_artistGroups release]; _artistGroups = [_allArtistGroups retain];
+        [_sectionIndexMap release];
+        _sectionIndexMap = [[TBAlphabeticIndex sectionMapForArtistGroups:_artistGroups] retain];
     }
     self.tableView.backgroundView = nil;
     [self.tableView reloadData];
@@ -84,9 +123,22 @@
     [self.navigationController setToolbarHidden:YES animated:animated];
 }
 
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+    return _selectedArtist ? 1 : (NSInteger)[_artistGroups count];
+}
+
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
     if (_selectedArtist) return (NSInteger)[[self selectedAlbums] count];
-    return (NSInteger)[_artistGroups count];
+    return [_artistGroups count] ? 1 : 0;
+}
+
+- (void)alphabetIndexSelected:(NSNumber *)indexNumber {
+    NSInteger index = [indexNumber integerValue];
+    if (index < 0 || index >= (NSInteger)[_sectionIndexMap count]) return;
+    NSInteger section = [[_sectionIndexMap objectAtIndex:(NSUInteger)index] integerValue];
+    if (section >= 0 && section < (NSInteger)[_artistGroups count])
+        [self.tableView scrollToRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:section]
+            atScrollPosition:UITableViewScrollPositionTop animated:NO];
 }
 
 - (NSArray *)selectedAlbums { return [_selectedArtist objectForKey:TBAlbumsKey]; }
@@ -109,7 +161,7 @@
         cell.detailTextLabel.text = [NSString stringWithFormat:@"%lu tracks",
             (unsigned long)[tracks count]];
     } else {
-        NSDictionary *artist = [_artistGroups objectAtIndex:(NSUInteger)indexPath.row];
+        NSDictionary *artist = [_artistGroups objectAtIndex:(NSUInteger)indexPath.section];
         cell.textLabel.text = [artist objectForKey:TBArtistNameKey];
         cell.detailTextLabel.text = [NSString stringWithFormat:@"%lu albums",
             (unsigned long)[[artist objectForKey:TBAlbumsKey] count]];
@@ -134,7 +186,7 @@
             initWithAlbum:[[self selectedAlbums] objectAtIndex:(NSUInteger)indexPath.row]];
     } else {
         controller = [[TBArtistsViewController alloc]
-            initWithArtist:[_artistGroups objectAtIndex:(NSUInteger)indexPath.row]];
+            initWithArtist:[_artistGroups objectAtIndex:(NSUInteger)indexPath.section]];
     }
     [self.navigationController pushViewController:controller animated:YES];
     [controller release];
@@ -143,7 +195,11 @@
 - (void)dealloc {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     [_artistGroups release];
+    [_allArtistGroups release];
     [_selectedArtist release];
+    [_sectionIndexMap release];
+    _searchBar.delegate = nil; [_searchBar release];
+    [_tableView release]; [_alphabetIndexView release];
     [super dealloc];
 }
 

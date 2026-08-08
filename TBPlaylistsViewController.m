@@ -4,6 +4,9 @@
 #import "TBLoadingView.h"
 #import "TBNowPlayingViewController.h"
 #import "TBTheme.h"
+#import "TBUserPlaylistManager.h"
+#import "TBUserPlaylistViewController.h"
+#import "TBPlaylistNameViewController.h"
 
 @implementation TBPlaylistsViewController
 
@@ -16,16 +19,40 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     [TBTheme styleTableView:self.tableView];
+    _searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(0, 0, 320, 44)]; _searchBar.delegate = self; _searchBar.placeholder = @"Search Playlists"; self.tableView.tableHeaderView = _searchBar;
     self.navigationItem.rightBarButtonItem = [[[UIBarButtonItem alloc]
         initWithTitle:@"Player" style:UIBarButtonItemStyleBordered
         target:self action:@selector(showNowPlaying:)] autorelease];
-    _playlists = [[[TBLibraryManager sharedManager] playlists] retain];
+    _allPlaylists = [[[TBLibraryManager sharedManager] playlists] retain]; _playlists = [_allPlaylists retain];
+    _allUserPlaylists = [[[TBUserPlaylistManager sharedManager] playlists] retain]; _userPlaylists = [_allUserPlaylists retain];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(playlistsReady:)
         name:TBLibraryPlaylistsDidLoadNotification object:[TBLibraryManager sharedManager]];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(userPlaylistsChanged:)
+        name:TBUserPlaylistsDidChangeNotification object:[TBUserPlaylistManager sharedManager]];
     if (![[TBLibraryManager sharedManager] playlistsLoaded]) {
         self.tableView.backgroundView = TBCreateLoadingView(@"Loading Playlists…");
         [[TBLibraryManager sharedManager] beginLoadingLibrary];
     }
+}
+
+- (void)userPlaylistsChanged:(NSNotification *)notification {
+    [_allUserPlaylists release]; _allUserPlaylists = [[[TBUserPlaylistManager sharedManager] playlists] retain];
+    [self searchBar:_searchBar textDidChange:_searchBar.text];
+}
+
+- (void)newPlaylist:(id)sender {
+    TBPlaylistNameViewController *nameController = [[TBPlaylistNameViewController alloc]
+        initWithTarget:self action:@selector(createdPlaylistNamed:)];
+    UINavigationController *navigation = [[UINavigationController alloc]
+        initWithRootViewController:nameController];
+    navigation.navigationBar.tintColor = [TBTheme accentColor];
+    [nameController release];
+    [self presentModalViewController:navigation animated:YES];
+    [navigation release];
+}
+
+- (void)createdPlaylistNamed:(NSString *)name {
+    [[TBUserPlaylistManager sharedManager] createPlaylistWithName:name];
 }
 
 - (void)showNowPlaying:(id)sender {
@@ -35,19 +62,36 @@
 }
 
 - (void)playlistsReady:(NSNotification *)notification {
-    [_playlists release];
-    _playlists = [[[TBLibraryManager sharedManager] playlists] retain];
+    [_allPlaylists release]; _allPlaylists = [[[TBLibraryManager sharedManager] playlists] retain];
+    [self searchBar:_searchBar textDidChange:_searchBar.text];
     self.tableView.backgroundView = nil;
     [self.tableView reloadData];
 }
+
+- (void)searchBar:(UISearchBar *)searchBar textDidChange:(NSString *)query {
+    [_playlists release]; [_userPlaylists release];
+    if (![query length]) { _playlists = [_allPlaylists retain]; _userPlaylists = [_allUserPlaylists retain]; }
+    else { NSMutableArray *systems = [NSMutableArray array]; NSMutableArray *users = [NSMutableArray array]; NSUInteger i;
+        for (i = 0; i < [_allPlaylists count]; i++) { MPMediaPlaylist *p = [_allPlaylists objectAtIndex:i]; NSString *name = [p valueForProperty:MPMediaPlaylistPropertyName]; if ([name rangeOfString:query options:(NSCaseInsensitiveSearch|NSDiacriticInsensitiveSearch)].location != NSNotFound) [systems addObject:p]; }
+        for (i = 0; i < [_allUserPlaylists count]; i++) { NSDictionary *p = [_allUserPlaylists objectAtIndex:i]; if ([[p objectForKey:TBUserPlaylistNameKey] rangeOfString:query options:(NSCaseInsensitiveSearch|NSDiacriticInsensitiveSearch)].location != NSNotFound) [users addObject:p]; }
+        _playlists = [systems copy]; _userPlaylists = [users copy];
+    } [self.tableView reloadData];
+}
+- (void)searchBarSearchButtonClicked:(UISearchBar *)bar { [bar resignFirstResponder]; }
 
 - (void)viewWillAppear:(BOOL)animated {
     [super viewWillAppear:animated];
     [self.navigationController setToolbarHidden:YES animated:animated];
 }
 
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView { return 2; }
+
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-    return (NSInteger)[_playlists count];
+    return section == 0 ? (NSInteger)[_userPlaylists count] + 1 : (NSInteger)[_playlists count];
+}
+
+- (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
+    return section == 0 ? @"Touchbox Playlists" : @"System Playlists";
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -58,16 +102,39 @@
     cell.backgroundColor = [TBTheme backgroundColor];
     cell.textLabel.font = [TBTheme primaryFont];
     cell.textLabel.textColor = [TBTheme primaryTextColor];
-    MPMediaPlaylist *playlist = [_playlists objectAtIndex:(NSUInteger)indexPath.row];
-    NSString *name = [playlist valueForProperty:MPMediaPlaylistPropertyName];
-    cell.textLabel.text = name ? name : @"Unknown Playlist";
-    cell.detailTextLabel.text = nil;
+    if (indexPath.section == 0) {
+        if (indexPath.row == 0) {
+            cell.textLabel.text = @"+ New Playlist";
+            cell.textLabel.textColor = [TBTheme accentColor];
+            cell.detailTextLabel.text = nil;
+        } else {
+            NSDictionary *playlist = [_userPlaylists objectAtIndex:(NSUInteger)indexPath.row - 1];
+            cell.textLabel.text = [playlist objectForKey:TBUserPlaylistNameKey];
+            cell.textLabel.textColor = [TBTheme primaryTextColor];
+            cell.detailTextLabel.text = [NSString stringWithFormat:@"%lu tracks",
+                (unsigned long)[[playlist objectForKey:TBUserPlaylistTrackIDsKey] count]];
+        }
+    } else {
+        MPMediaPlaylist *playlist = [_playlists objectAtIndex:(NSUInteger)indexPath.row];
+        NSString *name = [playlist valueForProperty:MPMediaPlaylistPropertyName];
+        cell.textLabel.text = name ? name : @"Unknown Playlist";
+        cell.textLabel.textColor = [TBTheme primaryTextColor];
+        cell.detailTextLabel.text = nil;
+    }
     cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
     return cell;
 }
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    if (indexPath.section == 0) {
+        if (indexPath.row == 0) { [self newPlaylist:nil]; return; }
+        TBUserPlaylistViewController *controller = [[TBUserPlaylistViewController alloc]
+            initWithPlaylist:[_userPlaylists objectAtIndex:(NSUInteger)indexPath.row - 1]];
+        [self.navigationController pushViewController:controller animated:YES];
+        [controller release];
+        return;
+    }
     if (_loadingPlaylistItems) return;
     MPMediaPlaylist *playlist = [_playlists objectAtIndex:(NSUInteger)indexPath.row];
     NSString *name = [playlist valueForProperty:MPMediaPlaylistPropertyName];
@@ -106,6 +173,8 @@
 - (void)dealloc {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     [_playlists release];
+    [_userPlaylists release];
+    [_allPlaylists release]; [_allUserPlaylists release]; _searchBar.delegate = nil; [_searchBar release];
     [super dealloc];
 }
 

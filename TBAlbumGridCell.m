@@ -12,18 +12,18 @@
 - (id)initWithFrame:(CGRect)frame {
     self = [super initWithFrame:frame];
     if (self) {
-        _artworkView = [[UIImageView alloc] initWithFrame:CGRectMake(5, 0, 138, 138)];
+        _artworkView = [[UIImageView alloc] initWithFrame:CGRectMake(4, 0, 133, 133)];
         _artworkView.backgroundColor = [TBTheme placeholderColor];
-        _artworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(138, 138)];
+        _artworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(133, 133)];
         _artworkView.contentMode = UIViewContentModeScaleAspectFit;
         [self addSubview:_artworkView];
-        _titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(5, 140, 138, 18)];
+        _titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(4, 135, 133, 18)];
         _titleLabel.font = [TBTheme primaryFont];
         _titleLabel.textColor = [TBTheme primaryTextColor];
         _titleLabel.backgroundColor = [TBTheme backgroundColor];
         _titleLabel.lineBreakMode = UILineBreakModeTailTruncation;
         [self addSubview:_titleLabel];
-        _artistLabel = [[UILabel alloc] initWithFrame:CGRectMake(5, 158, 138, 16)];
+        _artistLabel = [[UILabel alloc] initWithFrame:CGRectMake(4, 153, 133, 16)];
         _artistLabel.font = [TBTheme secondaryFont];
         _artistLabel.textColor = [TBTheme secondaryTextColor];
         _artistLabel.backgroundColor = [TBTheme backgroundColor];
@@ -56,7 +56,7 @@
     if (cached) {
         _artworkView.image = cached;
     } else {
-        [[TBArtworkCache sharedCache] requestImageForItem:item size:CGSizeMake(138, 138)
+        [[TBArtworkCache sharedCache] requestImageForItem:item size:CGSizeMake(133, 133)
             key:_artworkKey target:self selector:@selector(artworkLoaded:)];
     }
 }
@@ -70,7 +70,7 @@
 - (void)resetContent {
     self.album = nil;
     self.artworkKey = nil;
-    _artworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(138, 138)];
+    _artworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(133, 133)];
     _titleLabel.text = nil;
     _artistLabel.text = nil;
 }
@@ -94,8 +94,8 @@
         self.selectionStyle = UITableViewCellSelectionStyleNone;
         self.backgroundColor = [TBTheme backgroundColor];
         self.contentView.backgroundColor = [TBTheme backgroundColor];
-        _leftItem = [[TBAlbumItemControl alloc] initWithFrame:CGRectMake(8, 3, 148, 176)];
-        _rightItem = [[TBAlbumItemControl alloc] initWithFrame:CGRectMake(164, 3, 148, 176)];
+        _leftItem = [[TBAlbumItemControl alloc] initWithFrame:CGRectMake(6, 3, 141, 171)];
+        _rightItem = [[TBAlbumItemControl alloc] initWithFrame:CGRectMake(153, 3, 141, 171)];
         [self.contentView addSubview:_leftItem];
         [self.contentView addSubview:_rightItem];
     }

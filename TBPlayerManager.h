@@ -1,6 +1,8 @@
 #import <Foundation/Foundation.h>
 #import <MediaPlayer/MediaPlayer.h>
 
+extern NSString *const TBPlayerQueueDidChangeNotification;
+
 @interface TBPlayerManager : NSObject {
     MPMusicPlayerController *_musicPlayer;
     NSArray *_originalQueueItems;
@@ -18,6 +20,10 @@
 
 + (TBPlayerManager *)sharedManager;
 - (void)playItems:(NSArray *)items startingAtItem:(MPMediaItem *)item;
+- (void)playItemsShuffled:(NSArray *)items;
+- (void)playNextItem:(MPMediaItem *)item;
+- (void)addItemToQueue:(MPMediaItem *)item;
+- (void)savePlaybackState;
 - (void)togglePlayPause;
 - (void)previous;
 - (void)next;

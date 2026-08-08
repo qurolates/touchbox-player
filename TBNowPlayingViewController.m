@@ -3,6 +3,8 @@
 #import "TBQueueViewController.h"
 #import "TBTheme.h"
 #import "TBIconFactory.h"
+#import "TBFavoritesManager.h"
+#import "TBAddToPlaylistViewController.h"
 
 @implementation TBNowPlayingViewController
 
@@ -56,12 +58,25 @@
     _artworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(220, 220)];
     _artworkView.contentMode = UIViewContentModeScaleAspectFit;
     [self.view addSubview:_artworkView];
-    _titleLabel = [[self labelWithFrame:CGRectMake(15, 228, 290, 22)
+    _titleLabel = [[self labelWithFrame:CGRectMake(15, 228, 258, 22)
         font:[TBTheme sectionTitleFont] color:[TBTheme primaryTextColor]] retain];
+    _favoriteButton = [[UIButton buttonWithType:UIButtonTypeCustom] retain];
+    _favoriteButton.frame = CGRectMake(274, 221, 42, 36);
+    [_favoriteButton addTarget:self action:@selector(favoritePressed:)
+              forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:_favoriteButton];
     _artistLabel = [[self labelWithFrame:CGRectMake(15, 250, 290, 18)
         font:[TBTheme secondaryFont] color:[TBTheme secondaryTextColor]] retain];
-    _albumLabel = [[self labelWithFrame:CGRectMake(15, 268, 290, 17)
+    _albumLabel = [[self labelWithFrame:CGRectMake(15, 268, 250, 17)
         font:[TBTheme metadataFont] color:[TBTheme secondaryTextColor]] retain];
+    UIButton *addToPlaylist = [UIButton buttonWithType:UIButtonTypeCustom];
+    addToPlaylist.frame = CGRectMake(268, 258, 48, 34);
+    addToPlaylist.titleLabel.font = [TBTheme metadataFont];
+    [addToPlaylist setTitle:@"+ List" forState:UIControlStateNormal];
+    [addToPlaylist setTitleColor:[TBTheme accentColor] forState:UIControlStateNormal];
+    [addToPlaylist addTarget:self action:@selector(addToPlaylistPressed:)
+             forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:addToPlaylist];
     _elapsedLabel = [[self labelWithFrame:CGRectMake(4, 294, 46, 18)
         font:[TBTheme metadataFont] color:[TBTheme secondaryTextColor]] retain];
     _remainingLabel = [[self labelWithFrame:CGRectMake(270, 294, 46, 18)
@@ -94,6 +109,8 @@
         name:MPMusicPlayerControllerNowPlayingItemDidChangeNotification object:player];
     [center addObserver:self selector:@selector(playerStateChanged:)
         name:MPMusicPlayerControllerPlaybackStateDidChangeNotification object:player];
+    [center addObserver:self selector:@selector(favoritesChanged:)
+        name:TBFavoritesDidChangeNotification object:nil];
     [self updateAll];
 }
 
@@ -125,8 +142,25 @@
     _artistLabel.text = item ? ([item valueForProperty:MPMediaItemPropertyArtist] ?: @"Unknown Artist") : @"";
     _albumLabel.text = item ? ([item valueForProperty:MPMediaItemPropertyAlbumTitle] ?: @"Unknown Album") : @"";
     [self updateButtons];
+    [self updateFavoriteButton];
     [self updateProgress];
     [self requestArtworkForItem:item];
+}
+
+- (void)updateFavoriteButton {
+    MPMediaItem *item = [TBPlayerManager sharedManager].musicPlayer.nowPlayingItem;
+    BOOL favorite = item && [[TBFavoritesManager sharedManager] isFavoriteItem:item];
+    [_favoriteButton setImage:[TBIconFactory iconNamed:@"star" active:favorite]
+                     forState:UIControlStateNormal];
+    _favoriteButton.enabled = item != nil;
+    _favoriteButton.alpha = item ? 1.0f : 0.35f;
+}
+
+- (void)favoritePressed:(id)sender {
+    MPMediaItem *item = [TBPlayerManager sharedManager].musicPlayer.nowPlayingItem;
+    if (!item) return;
+    [[TBFavoritesManager sharedManager] toggleFavoriteItem:item];
+    [self updateFavoriteButton];
 }
 
 - (void)requestArtworkForItem:(MPMediaItem *)item {
@@ -207,8 +241,17 @@
     [self.navigationController pushViewController:controller animated:YES];
     [controller release];
 }
+- (void)addToPlaylistPressed:(id)sender {
+    MPMediaItem *item = [TBPlayerManager sharedManager].musicPlayer.nowPlayingItem;
+    if (!item) return;
+    TBAddToPlaylistViewController *controller = [[TBAddToPlaylistViewController alloc]
+        initWithItem:item];
+    [self.navigationController pushViewController:controller animated:YES];
+    [controller release];
+}
 - (void)playerItemChanged:(NSNotification *)notification { [self updateAll]; }
 - (void)playerStateChanged:(NSNotification *)notification { [self updateButtons]; [self updateProgress]; }
+- (void)favoritesChanged:(NSNotification *)notification { [self updateFavoriteButton]; }
 
 - (void)didReceiveMemoryWarning {
     _artworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(220, 220)];
@@ -221,6 +264,7 @@
     [_artworkView release]; [_titleLabel release]; [_artistLabel release]; [_albumLabel release];
     [_elapsedLabel release]; [_remainingLabel release]; [_progressSlider release];
     [_playPauseButton release]; [_shuffleButton release]; [_repeatButton release];
+    [_favoriteButton release];
     [_artworkKey release];
     [super dealloc];
 }

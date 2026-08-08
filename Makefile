@@ -7,10 +7,17 @@ APPLICATION_NAME = Touchbox
 
 Touchbox_FILES = main.m AppDelegate.m \
 	TBLibraryManager.m TBPlayerManager.m TBFavoritesManager.m \
+	TBUserPlaylistManager.m \
+	TBRecentManager.m TBRecentViewController.m \
+	TBClickWheelView.m TBClassicViewController.m \
 	TBLoadingView.m \
 	TBTheme.m TBIconFactory.m \
+	TBAlphabeticIndex.m \
+	TBAlphabetIndexView.m \
 	TBArtworkCache.m TBAlbumGridCell.m \
 	TBNowPlayingViewController.m TBQueueViewController.m \
+	TBPlaylistNameViewController.m TBUserPlaylistViewController.m \
+	TBAddToPlaylistViewController.m \
 	TBTrackListViewController.m TBSongsViewController.m \
 	TBAlbumsViewController.m TBArtistsViewController.m TBAlbumViewController.m \
 	TBFavoritesViewController.m TBPlaylistsViewController.m
