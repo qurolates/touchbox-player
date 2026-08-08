@@ -17,6 +17,30 @@ static NSString *const TBClassicStateItemsKey = @"items";
 static NSString *const TBClassicStateSelectionKey = @"selection";
 static NSString *const TBClassicRootSelectionDefaultsKey = @"TBClassicRootSelection";
 
+static NSInteger TBClassicAlbumTitleGroup(NSString *title) {
+    if (![title length] || [title caseInsensitiveCompare:@"Unknown Album"] == NSOrderedSame) return 2;
+    NSString *folded = [title stringByFoldingWithOptions:(NSCaseInsensitiveSearch | NSDiacriticInsensitiveSearch)
+        locale:[NSLocale currentLocale]];
+    unichar first = [[folded uppercaseString] characterAtIndex:0];
+    return (first >= 'A' && first <= 'Z') ? 0 : 1;
+}
+
+static NSInteger TBClassicAlbumTitleSort(id left, id right, void *context) {
+    NSString *leftTitle = [left objectForKey:TBAlbumTitleKey];
+    NSString *rightTitle = [right objectForKey:TBAlbumTitleKey];
+    NSInteger leftGroup = TBClassicAlbumTitleGroup(leftTitle);
+    NSInteger rightGroup = TBClassicAlbumTitleGroup(rightTitle);
+    if (leftGroup < rightGroup) return NSOrderedAscending;
+    if (leftGroup > rightGroup) return NSOrderedDescending;
+    NSComparisonResult result = [(leftTitle ? leftTitle : @"") compare:(rightTitle ? rightTitle : @"")
+        options:(NSCaseInsensitiveSearch | NSDiacriticInsensitiveSearch)];
+    if (result != NSOrderedSame) return result;
+    NSString *leftArtist = [left objectForKey:TBAlbumArtistKey];
+    NSString *rightArtist = [right objectForKey:TBAlbumArtistKey];
+    return [(leftArtist ? leftArtist : @"") compare:(rightArtist ? rightArtist : @"")
+        options:(NSCaseInsensitiveSearch | NSDiacriticInsensitiveSearch)];
+}
+
 typedef enum {
     TBClassicScreenRoot = 0,
     TBClassicScreenMusic,
@@ -136,6 +160,7 @@ typedef enum {
     NSMutableArray *albums = [NSMutableArray array]; NSUInteger index;
     for (index = 0; index < [groups count]; index++)
         [albums addObjectsFromArray:[[groups objectAtIndex:index] objectForKey:TBAlbumsKey]];
+    [albums sortUsingFunction:TBClassicAlbumTitleSort context:NULL];
     return albums;
 }
 
