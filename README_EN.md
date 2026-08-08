@@ -225,26 +225,96 @@ On top of the local system library, Touchbox adds:
 
 Touchbox remains a native offline player for music already stored on the device: no streaming, accounts, recommendations, advertising, or internet dependency.
 
-## Compatibility and Installation
+## Compatibility
 
 - primary platform: iPod touch 3G / iPod3,1;
 - verified target version: iOS 4.1;
 - may also run on iOS 5 and iOS 6;
 - 320×480 non-Retina display;
 - ARMv7;
-- jailbreak and `.deb` installation;
+- jailbreak for `.deb` installation;
 - public `MediaPlayer.framework` APIs.
-
-After installation, respring the device. If SpringBoard shows an old or missing icon, refresh the icon cache with `uicache` and respring again.
 
 > iOS 5 and iOS 6 are listed as possible compatibility targets. The primary development and device-test configuration is an iPod3,1 running iOS 4.1.
 
-## Brief Implementation Notes
+## Building
 
-Touchbox is written in Objective-C with Manual Reference Counting and built with Theos against `iPhoneOS4.1.sdk`:
+### Requirements
+
+- macOS or Linux with [Theos](https://theos.dev/) installed;
+- a Theos toolchain with Objective-C/ARMv7 support;
+- the original `iPhoneOS4.1.sdk` at `$THEOS/sdks/iPhoneOS4.1.sdk`;
+- the Touchbox source tree.
+
+The SDK is not included in this repository. The expected layout is:
+
+```text
+$THEOS/
+└── sdks/
+    └── iPhoneOS4.1.sdk/
+```
+
+The project `Makefile` is already configured for:
+
+```make
+ARCHS = armv7
+TARGET = iphone:clang:4.1:4.1
+```
+
+From the repository root, run:
+
+```sh
+export THEOS=/path/to/theos
+make clean package
+```
+
+Alternatively, provide the path for a single command:
 
 ```sh
 make clean package THEOS=/path/to/theos
 ```
+
+The resulting package is written to `packages/`:
+
+```text
+packages/com.touchbox.player_*.deb
+```
+
+For normal iterative builds, `make package` is sufficient. Use `make clean package` after changing resources, `Info.plist`, the source-file list, or the SDK.
+
+## Installing on a Device
+
+The device must be jailbroken and capable of installing Debian packages. Keeping the previous working `.deb` before upgrading is recommended.
+
+### Using SSH
+
+Copy the package to the iPod, replacing the IP address and package filename as needed:
+
+```sh
+scp packages/com.touchbox.player_*.deb root@IP_ADDRESS:/tmp/touchbox.deb
+```
+
+Connect to the device and install it:
+
+```sh
+ssh root@IP_ADDRESS
+dpkg -i /tmp/touchbox.deb
+uicache
+killall SpringBoard
+```
+
+Some iOS 4 setups or package managers run `uicache` or respring automatically. If Touchbox does not appear on the Home screen, or its icon is missing or stale, run `uicache` and respring manually.
+
+### Using a Package Manager
+
+You can also transfer the `.deb` with a file manager and open it in an installed package manager. Run `uicache` and respring afterward if the package manager does not do so automatically.
+
+Updates can be installed over an existing version because the package identifier remains `com.touchbox.player`. Favorites, Touchbox Playlists, Recent data, theme selection, and the saved queue live in the application sandbox. Keeping a backup of important data is still recommended before testing experimental builds.
+
+Once launched, Touchbox uses the music already present in the device library. It does not download music or copy audio files into the application package.
+
+## Brief Implementation Notes
+
+Touchbox is written in Objective-C with Manual Reference Counting and built with Theos against `iPhoneOS4.1.sdk`.
 
 `TBLibraryManager` handles the media index, `TBPlayerManager` provides shared playback and queue management, and lightweight managers store Favorites, Playlists, and Recent data. `TBTheme` supplies the shared palette. Standard and Classic are two presentation layers over the same playback engine and user data.
