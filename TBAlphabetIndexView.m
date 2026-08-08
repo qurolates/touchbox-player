@@ -11,9 +11,12 @@
         _selectedIndex = -1;
         self.backgroundColor = [TBTheme backgroundColor];
         self.autoresizingMask = UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleLeftMargin;
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(themeChanged:)
+            name:TBThemeDidChangeNotification object:nil];
     }
     return self;
 }
+- (void)themeChanged:(NSNotification *)notification { self.backgroundColor = [TBTheme backgroundColor]; [self setNeedsDisplay]; }
 - (void)drawRect:(CGRect)rect {
     CGFloat itemHeight = self.bounds.size.height / MAX((CGFloat)[_titles count], 1.0f);
     UIFont *font = [UIFont boldSystemFontOfSize:8.0f];
@@ -52,5 +55,5 @@
     _selectedIndex = -1;
     [self setNeedsDisplay];
 }
-- (void)dealloc { [_titles release]; [super dealloc]; }
+- (void)dealloc { [[NSNotificationCenter defaultCenter] removeObserver:self]; [_titles release]; [super dealloc]; }
 @end

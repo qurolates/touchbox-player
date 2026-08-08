@@ -22,5 +22,6 @@
 - (void)reloadTrackItems;
 - (void)showNowPlaying:(id)sender;
 - (void)shuffleCurrentItems;
+- (void)applyTheme;
 
 @end

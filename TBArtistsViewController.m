@@ -50,6 +50,8 @@
         target:self action:@selector(showNowPlaying:)] autorelease];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(indexReady:)
         name:TBLibraryIndexDidLoadNotification object:[TBLibraryManager sharedManager]];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(themeChanged:)
+        name:TBThemeDidChangeNotification object:nil];
     if (_selectedArtist == nil) {
         _allArtistGroups = [[[TBLibraryManager sharedManager] artistGroups] retain];
         _artistGroups = [_allArtistGroups retain];
@@ -76,6 +78,10 @@
         self.tableView.tableHeaderView = header;
     }
 }
+
+- (void)themeChanged:(NSNotification *)notification { [self applyTheme]; }
+- (void)applyTheme { self.view.backgroundColor = [TBTheme backgroundColor]; [TBTheme styleTableView:self.tableView]; _searchBar.tintColor = [TBTheme searchBackgroundColor]; _alphabetIndexView.backgroundColor = [TBTheme backgroundColor]; [_alphabetIndexView setNeedsDisplay];
+    if (_selectedArtist && self.tableView.tableHeaderView) { self.tableView.tableHeaderView.backgroundColor = [TBTheme backgroundColor]; UILabel *label = [[self.tableView.tableHeaderView subviews] count] ? [[self.tableView.tableHeaderView subviews] objectAtIndex:0] : nil; label.backgroundColor = [TBTheme backgroundColor]; label.textColor = [TBTheme primaryTextColor]; } [self.tableView reloadData]; }
 
 - (void)shuffleArtist:(id)sender { NSMutableArray *items = [NSMutableArray array]; NSUInteger i; NSArray *albums = [self selectedAlbums]; for (i = 0; i < [albums count]; i++) [items addObjectsFromArray:[[albums objectAtIndex:i] objectForKey:TBAlbumItemsKey]]; if (![items count]) return; [[TBPlayerManager sharedManager] playItemsShuffled:items]; [self showNowPlaying:nil]; }
 

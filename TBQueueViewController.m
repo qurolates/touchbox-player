@@ -26,7 +26,10 @@
         object:[TBPlayerManager sharedManager].musicPlayer];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(queueChanged:)
         name:TBPlayerQueueDidChangeNotification object:[TBPlayerManager sharedManager]];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(themeChanged:)
+        name:TBThemeDidChangeNotification object:nil];
 }
+- (void)themeChanged:(NSNotification *)notification { [TBTheme styleTableView:self.tableView]; UILabel *header = (UILabel *)self.tableView.tableHeaderView; header.backgroundColor = [TBTheme backgroundColor]; header.textColor = [TBTheme secondaryTextColor]; [self.tableView reloadData]; }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
     return (NSInteger)[_items count];

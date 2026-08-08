@@ -23,7 +23,10 @@
     _textField.returnKeyType = UIReturnKeyDone;
     [self.view addSubview:_textField];
     [_textField becomeFirstResponder];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(themeChanged:) name:TBThemeDidChangeNotification object:nil];
+    [self themeChanged:nil];
 }
+- (void)themeChanged:(NSNotification *)notification { self.view.backgroundColor = [TBTheme backgroundColor]; _textField.backgroundColor = [TBTheme elevatedBackgroundColor]; _textField.textColor = [TBTheme primaryTextColor]; }
 - (void)cancel:(id)sender { [self dismissModalViewControllerAnimated:YES]; }
 - (void)save:(id)sender {
     NSString *name = [[_textField.text copy] autorelease];
@@ -31,5 +34,5 @@
     [self dismissModalViewControllerAnimated:NO];
     if ([_target respondsToSelector:_action]) [_target performSelector:_action withObject:name];
 }
-- (void)dealloc { [_textField release]; [super dealloc]; }
+- (void)dealloc { [[NSNotificationCenter defaultCenter] removeObserver:self]; [_textField release]; [super dealloc]; }
 @end

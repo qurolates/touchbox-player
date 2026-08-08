@@ -13,7 +13,9 @@
     [super viewDidLoad];
     [TBTheme styleTableView:self.tableView];
     _playlists = [[[TBUserPlaylistManager sharedManager] playlists] retain];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(themeChanged:) name:TBThemeDidChangeNotification object:nil];
 }
+- (void)themeChanged:(NSNotification *)notification { [TBTheme styleTableView:self.tableView]; [self.tableView reloadData]; }
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
     return (NSInteger)[_playlists count] + 1;
 }
@@ -66,5 +68,5 @@
     [alert show];
     [alert release];
 }
-- (void)dealloc { [_item release]; [_playlists release]; [super dealloc]; }
+- (void)dealloc { [[NSNotificationCenter defaultCenter] removeObserver:self]; [_item release]; [_playlists release]; [super dealloc]; }
 @end

@@ -1,5 +1,6 @@
 #import "TBClickWheelView.h"
 #import <math.h>
+#import "TBTheme.h"
 
 static const CGFloat TBWheelRadius = 105.0f;
 static const CGFloat TBCenterRadius = 42.0f;
@@ -11,7 +12,7 @@ static const CGFloat TBStepThreshold = 0.26f;
 
 - (id)initWithFrame:(CGRect)frame {
     if ((self = [super initWithFrame:frame])) {
-        self.backgroundColor = [UIColor colorWithRed:0.88f green:0.88f blue:0.86f alpha:1.0f];
+        self.backgroundColor = [TBTheme classicBodyColor];
         self.multipleTouchEnabled = NO;
         self.exclusiveTouch = YES;
     }
@@ -43,20 +44,21 @@ static const CGFloat TBStepThreshold = 0.26f;
 - (void)drawRect:(CGRect)rect {
     CGContextRef context = UIGraphicsGetCurrentContext(); CGPoint center = [self wheelCenter];
     CGRect wheelRect = CGRectMake(center.x - TBWheelRadius, center.y - TBWheelRadius, TBWheelRadius * 2.0f, TBWheelRadius * 2.0f);
-    CGContextSetFillColorWithColor(context, [UIColor colorWithRed:0.78f green:0.79f blue:0.79f alpha:1.0f].CGColor);
+    self.backgroundColor = [TBTheme classicBodyColor];
+    CGContextSetFillColorWithColor(context, [TBTheme classicWheelColor].CGColor);
     CGContextFillEllipseInRect(context, wheelRect);
-    CGContextSetStrokeColorWithColor(context, [UIColor colorWithWhite:0.58f alpha:1.0f].CGColor);
+    CGContextSetStrokeColorWithColor(context, [TBTheme classicWheelBorderColor].CGColor);
     CGContextSetLineWidth(context, 1.0f); CGContextStrokeEllipseInRect(context, wheelRect);
     CGRect centerRect = CGRectMake(center.x - TBCenterRadius, center.y - TBCenterRadius, TBCenterRadius * 2.0f, TBCenterRadius * 2.0f);
     UIColor *centerColor = (_pressedRegion == TBClickWheelRegionCenter)
-        ? [UIColor colorWithWhite:0.66f alpha:1.0f] : [UIColor colorWithWhite:0.86f alpha:1.0f];
+        ? [TBTheme classicPressedCenterColor] : [TBTheme classicCenterColor];
     CGContextSetFillColorWithColor(context, centerColor.CGColor); CGContextFillEllipseInRect(context, centerRect);
-    CGContextSetStrokeColorWithColor(context, [UIColor colorWithWhite:0.62f alpha:1.0f].CGColor); CGContextStrokeEllipseInRect(context, centerRect);
+    CGContextSetStrokeColorWithColor(context, [TBTheme classicWheelBorderColor].CGColor); CGContextStrokeEllipseInRect(context, centerRect);
 
     NSDictionary *labels = [NSDictionary dictionaryWithObjectsAndKeys:@"MENU", [NSNumber numberWithInt:TBClickWheelRegionMenu],
         @"|◀", [NSNumber numberWithInt:TBClickWheelRegionPrevious], @"▶|", [NSNumber numberWithInt:TBClickWheelRegionNext],
         @"▶ Ⅱ", [NSNumber numberWithInt:TBClickWheelRegionPlayPause], nil];
-    UIFont *font = [UIFont boldSystemFontOfSize:12.0f]; UIColor *normal = [UIColor colorWithWhite:0.27f alpha:1.0f]; UIColor *pressed = [UIColor colorWithRed:0.16f green:0.38f blue:0.68f alpha:1.0f];
+    UIFont *font = [UIFont boldSystemFontOfSize:12.0f]; UIColor *normal = [TBTheme classicWheelTextColor]; UIColor *pressed = [TBTheme accentColor];
     NSArray *regions = [NSArray arrayWithObjects:[NSNumber numberWithInt:TBClickWheelRegionMenu], [NSNumber numberWithInt:TBClickWheelRegionPrevious], [NSNumber numberWithInt:TBClickWheelRegionNext], [NSNumber numberWithInt:TBClickWheelRegionPlayPause], nil];
     NSUInteger i; for (i = 0; i < [regions count]; i++) { TBClickWheelRegion region = [[regions objectAtIndex:i] intValue]; NSString *text = [labels objectForKey:[regions objectAtIndex:i]]; CGSize size = [text sizeWithFont:font]; CGPoint p;
         if (region == TBClickWheelRegionMenu) p = CGPointMake(center.x - size.width/2, center.y - 91);

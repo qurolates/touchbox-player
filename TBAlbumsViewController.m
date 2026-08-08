@@ -56,11 +56,16 @@
     _sectionIndexMap = [[TBAlphabeticIndex sectionMapForArtistGroups:_artistGroups] retain];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(indexReady:)
         name:TBLibraryIndexDidLoadNotification object:[TBLibraryManager sharedManager]];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(themeChanged:)
+        name:TBThemeDidChangeNotification object:nil];
     if (![[TBLibraryManager sharedManager] indexLoaded]) {
         self.tableView.backgroundView = TBCreateLoadingView(@"Preparing Albums…");
         [[TBLibraryManager sharedManager] beginLoadingLibrary];
     }
 }
+
+- (void)themeChanged:(NSNotification *)notification { [self applyTheme]; }
+- (void)applyTheme { self.view.backgroundColor = [TBTheme backgroundColor]; [TBTheme styleTableView:self.tableView]; _searchBar.tintColor = [TBTheme searchBackgroundColor]; _alphabetIndexView.backgroundColor = [TBTheme backgroundColor]; [_alphabetIndexView setNeedsDisplay]; [self.tableView reloadData]; }
 
 - (void)showRecent:(id)sender { TBRecentViewController *controller = [[TBRecentViewController alloc] init]; [self.navigationController pushViewController:controller animated:YES]; [controller release]; }
 
@@ -149,6 +154,7 @@
         [cell.rightItem addTarget:self action:@selector(albumItemPressed:)
             forControlEvents:UIControlEventTouchUpInside];
     }
+    cell.backgroundColor = [TBTheme backgroundColor]; cell.contentView.backgroundColor = [TBTheme backgroundColor];
     NSArray *albums = [[_artistGroups objectAtIndex:(NSUInteger)indexPath.section]
         objectForKey:TBAlbumsKey];
     NSUInteger firstIndex = (NSUInteger)indexPath.row * 2;

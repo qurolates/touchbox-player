@@ -51,6 +51,8 @@
                  object:player.musicPlayer];
     [center addObserver:self selector:@selector(favoritesChanged:)
                    name:TBFavoritesDidChangeNotification object:nil];
+    [center addObserver:self selector:@selector(themeChanged:)
+                   name:TBThemeDidChangeNotification object:nil];
     self.navigationItem.rightBarButtonItem = [[[UIBarButtonItem alloc]
         initWithTitle:@"Player" style:UIBarButtonItemStyleBordered
         target:self action:@selector(showNowPlaying:)] autorelease];
@@ -77,6 +79,14 @@
                          space2, next, nil];
     [previous release]; [next release]; [space1 release]; [space2 release];
     [self updatePlayPauseButton];
+    [self applyTheme];
+}
+
+- (void)themeChanged:(NSNotification *)notification { [self applyTheme]; }
+- (void)applyTheme {
+    [TBTheme styleTableView:self.tableView]; _searchBar.tintColor = [TBTheme searchBackgroundColor];
+    if ([self.toolbarItems count] >= 5) { ((UIBarButtonItem *)[self.toolbarItems objectAtIndex:0]).image = [TBIconFactory iconNamed:@"previous" active:NO]; ((UIBarButtonItem *)[self.toolbarItems objectAtIndex:4]).image = [TBIconFactory iconNamed:@"next" active:NO]; }
+    [self.tableView reloadData]; [self updatePlayPauseButton];
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -147,6 +157,9 @@
     } else {
         favoriteButton = (UIButton *)cell.accessoryView;
     }
+    cell.backgroundColor = [TBTheme backgroundColor];
+    cell.textLabel.textColor = [TBTheme primaryTextColor];
+    cell.detailTextLabel.textColor = [TBTheme secondaryTextColor];
     MPMediaItem *item = [_items objectAtIndex:(NSUInteger)indexPath.row];
     NSString *title = [item valueForProperty:MPMediaItemPropertyTitle];
     NSString *artist = [item valueForProperty:MPMediaItemPropertyArtist];

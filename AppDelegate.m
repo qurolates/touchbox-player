@@ -18,6 +18,8 @@ static NSString *const TBClassicModeDefaultsKey = @"TBClassicModeEnabled";
 @synthesize tabBarController = _tabBarController;
 
 - (void)applicationDidFinishLaunching:(UIApplication *)application {
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(themeChanged:)
+        name:TBThemeDidChangeNotification object:nil];
     UIWindow *window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
     self.window = window;
     [window release];
@@ -59,6 +61,22 @@ static NSString *const TBClassicModeDefaultsKey = @"TBClassicModeEnabled";
     [[TBLibraryManager sharedManager] beginLoadingLibrary];
     if ([[NSUserDefaults standardUserDefaults] boolForKey:TBClassicModeDefaultsKey])
         [self showClassicMode];
+    [self applyTheme];
+}
+
+- (void)themeChanged:(NSNotification *)notification { [self applyTheme]; }
+- (void)applyTheme {
+    BOOL dark = [TBTheme isDarkTheme]; NSUInteger index;
+    for (index = 0; index < [self.tabBarController.viewControllers count]; index++) {
+        UINavigationController *navigation = [self.tabBarController.viewControllers objectAtIndex:index];
+        navigation.navigationBar.barStyle = dark ? UIBarStyleBlack : UIBarStyleDefault;
+        navigation.navigationBar.tintColor = [TBTheme navigationBarColor];
+        navigation.toolbar.barStyle = dark ? UIBarStyleBlack : UIBarStyleDefault;
+        navigation.toolbar.tintColor = [TBTheme navigationBarColor];
+    }
+    self.tabBarController.tabBar.backgroundColor = [TBTheme tabBarColor];
+    if (self.window.rootViewController == self.tabBarController)
+        [[UIApplication sharedApplication] setStatusBarStyle:(dark ? UIStatusBarStyleBlackOpaque : UIStatusBarStyleDefault) animated:NO];
 }
 
 - (void)applicationDidEnterBackground:(UIApplication *)application { [[TBPlayerManager sharedManager] savePlaybackState]; }
@@ -72,9 +90,10 @@ static NSString *const TBClassicModeDefaultsKey = @"TBClassicModeEnabled";
     [[NSUserDefaults standardUserDefaults] synchronize];
     NSLog(@"Touchbox Classic: prototype shown; playback queue unchanged");
 }
-- (void)showStandardMode { [[UIApplication sharedApplication] setStatusBarHidden:NO withAnimation:UIStatusBarAnimationNone]; self.window.rootViewController = self.tabBarController; [[NSUserDefaults standardUserDefaults] setBool:NO forKey:TBClassicModeDefaultsKey]; [[NSUserDefaults standardUserDefaults] synchronize]; NSLog(@"Touchbox Classic: returned to Standard Mode"); }
+- (void)showStandardMode { [[UIApplication sharedApplication] setStatusBarHidden:NO withAnimation:UIStatusBarAnimationNone]; self.window.rootViewController = self.tabBarController; [[NSUserDefaults standardUserDefaults] setBool:NO forKey:TBClassicModeDefaultsKey]; [[NSUserDefaults standardUserDefaults] synchronize]; [self applyTheme]; NSLog(@"Touchbox Classic: returned to Standard Mode"); }
 
 - (void)dealloc {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
     [_window release];
     [_tabBarController release];
     [_classicViewController release];

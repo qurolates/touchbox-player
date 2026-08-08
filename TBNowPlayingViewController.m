@@ -70,6 +70,7 @@
     _albumLabel = [[self labelWithFrame:CGRectMake(15, 268, 250, 17)
         font:[TBTheme metadataFont] color:[TBTheme secondaryTextColor]] retain];
     UIButton *addToPlaylist = [UIButton buttonWithType:UIButtonTypeCustom];
+    addToPlaylist.tag = 203;
     addToPlaylist.frame = CGRectMake(268, 258, 48, 34);
     addToPlaylist.titleLabel.font = [TBTheme metadataFont];
     [addToPlaylist setTitle:@"+ List" forState:UIControlStateNormal];
@@ -90,11 +91,13 @@
     [self.view addSubview:_progressSlider];
     UIButton *previous = [self buttonWithFrame:CGRectMake(31, 318, 64, 44)
         title:nil action:@selector(previousPressed:)];
+    previous.tag = 201;
     [previous setImage:[TBIconFactory iconNamed:@"previous" active:NO] forState:UIControlStateNormal];
     _playPauseButton = [[self buttonWithFrame:CGRectMake(128, 318, 64, 44)
         title:nil action:@selector(playPausePressed:)] retain];
     UIButton *next = [self buttonWithFrame:CGRectMake(225, 318, 64, 44)
         title:nil action:@selector(nextPressed:)];
+    next.tag = 202;
     [next setImage:[TBIconFactory iconNamed:@"next" active:NO] forState:UIControlStateNormal];
     _shuffleButton = [[self buttonWithFrame:CGRectMake(50, 370, 100, 36)
         title:@"Shuffle" action:@selector(shufflePressed:)] retain];
@@ -111,7 +114,28 @@
         name:MPMusicPlayerControllerPlaybackStateDidChangeNotification object:player];
     [center addObserver:self selector:@selector(favoritesChanged:)
         name:TBFavoritesDidChangeNotification object:nil];
+    [center addObserver:self selector:@selector(themeChanged:)
+        name:TBThemeDidChangeNotification object:nil];
     [self updateAll];
+    [self applyTheme];
+}
+
+- (void)themeChanged:(NSNotification *)notification { [self applyTheme]; }
+- (void)applyTheme {
+    self.view.backgroundColor = [TBTheme backgroundColor]; _artworkView.backgroundColor = [TBTheme placeholderColor];
+    MPMediaItem *themeItem = [TBPlayerManager sharedManager].musicPlayer.nowPlayingItem;
+    if (![themeItem valueForProperty:MPMediaItemPropertyArtwork])
+        _artworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(220, 220)];
+    _titleLabel.textColor = [TBTheme primaryTextColor]; _artistLabel.textColor = [TBTheme secondaryTextColor];
+    _albumLabel.textColor = [TBTheme secondaryTextColor]; _elapsedLabel.textColor = [TBTheme secondaryTextColor];
+    _remainingLabel.textColor = [TBTheme secondaryTextColor];
+    NSUInteger index; for (index = 0; index < [[self.view subviews] count]; index++) { UIView *view = [[self.view subviews] objectAtIndex:index];
+        if ([view isKindOfClass:[UIButton class]]) { UIButton *button = (UIButton *)view; [button setTitleColor:[TBTheme secondaryTextColor] forState:UIControlStateNormal]; [button setTitleColor:[TBTheme accentColor] forState:UIControlStateHighlighted]; }
+    }
+    [self updateButtons]; [self updateFavoriteButton];
+    [(UIButton *)[self.view viewWithTag:201] setImage:[TBIconFactory iconNamed:@"previous" active:NO] forState:UIControlStateNormal];
+    [(UIButton *)[self.view viewWithTag:202] setImage:[TBIconFactory iconNamed:@"next" active:NO] forState:UIControlStateNormal];
+    [(UIButton *)[self.view viewWithTag:203] setTitleColor:[TBTheme accentColor] forState:UIControlStateNormal];
 }
 
 - (void)viewWillAppear:(BOOL)animated {

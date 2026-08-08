@@ -38,6 +38,7 @@
     [header addSubview:shuffle];
     self.tableView.tableHeaderView = header;
 }
+- (void)applyTheme { [super applyTheme]; UIView *header = self.tableView.tableHeaderView; header.backgroundColor = [TBTheme backgroundColor]; NSUInteger i; for (i = 0; i < [[header subviews] count]; i++) { UIView *view = [[header subviews] objectAtIndex:i]; if ([view isKindOfClass:[UILabel class]]) { view.backgroundColor = [TBTheme backgroundColor]; ((UILabel *)view).textColor = [TBTheme secondaryTextColor]; } else if ([view isKindOfClass:[UIButton class]]) [(UIButton *)view setTitleColor:[TBTheme accentColor] forState:UIControlStateNormal]; } }
 - (void)shufflePlaylist:(id)sender {
     if (![self.items count]) return;
     [[TBPlayerManager sharedManager] playItemsShuffled:self.items];

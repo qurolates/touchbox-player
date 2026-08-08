@@ -11,7 +11,7 @@ Touchbox_FILES = main.m AppDelegate.m \
 	TBRecentManager.m TBRecentViewController.m \
 	TBClickWheelView.m TBClassicViewController.m \
 	TBLoadingView.m \
-	TBTheme.m TBIconFactory.m \
+	TBTheme.m TBThemeViewController.m TBIconFactory.m \
 	TBAlphabeticIndex.m \
 	TBAlphabetIndexView.m \
 	TBArtworkCache.m TBAlbumGridCell.m \

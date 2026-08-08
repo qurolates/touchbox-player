@@ -25,7 +25,7 @@
 }
 
 + (UIImage *)iconNamed:(NSString *)name active:(BOOL)active {
-    NSString *key = [NSString stringWithFormat:@"%@-%d", name, active];
+    NSString *key = [NSString stringWithFormat:@"%@-%d-theme%d", name, active, [TBTheme currentTheme]];
     UIImage *cached = [[self cache] objectForKey:key];
     if (cached) return cached;
     CGSize size = CGSizeMake(28, 28);
@@ -90,7 +90,7 @@
 }
 
 + (UIImage *)artworkPlaceholderWithSize:(CGSize)size {
-    NSString *key = [NSString stringWithFormat:@"placeholder-%u-%u", (unsigned)size.width, (unsigned)size.height];
+    NSString *key = [NSString stringWithFormat:@"placeholder-%u-%u-theme%d", (unsigned)size.width, (unsigned)size.height, [TBTheme currentTheme]];
     UIImage *cached = [[self cache] objectForKey:key];
     if (cached) return cached;
     UIGraphicsBeginImageContext(size);

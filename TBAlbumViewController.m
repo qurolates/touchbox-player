@@ -45,12 +45,16 @@
 }
 - (void)setNumber:(NSString *)number title:(NSString *)title duration:(NSString *)duration
           playing:(BOOL)playing {
+    self.backgroundColor = [TBTheme backgroundColor];
+    _numberLabel.textColor = [TBTheme secondaryTextColor]; _trackTitleLabel.textColor = [TBTheme primaryTextColor];
+    _durationLabel.textColor = [TBTheme secondaryTextColor];
     _numberLabel.text = number;
     _playingMarker.image = playing ? [TBIconFactory iconNamed:@"play" active:YES] : nil;
     _trackTitleLabel.frame = CGRectMake(playing ? 72 : 48, 0, playing ? 186 : 210, 44);
     _trackTitleLabel.text = title;
     _durationLabel.text = duration;
 }
+
 - (void)dealloc {
     [_numberLabel release]; [_trackTitleLabel release]; [_durationLabel release]; [_playingMarker release];
     [super dealloc];
@@ -58,6 +62,17 @@
 @end
 
 @implementation TBAlbumViewController
+
+- (void)applyTheme {
+    [super applyTheme]; UIView *header = self.tableView.tableHeaderView; header.backgroundColor = [TBTheme backgroundColor];
+    if ([self.items count] && ![[self.items objectAtIndex:0] valueForProperty:MPMediaItemPropertyArtwork])
+        _albumArtworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(132, 132)];
+    BOOL primaryAssigned = NO; NSUInteger index;
+    for (index = 0; index < [[header subviews] count]; index++) { UIView *view = [[header subviews] objectAtIndex:index];
+        if ([view isKindOfClass:[UILabel class]]) { UILabel *label = (UILabel *)view; label.backgroundColor = [UIColor clearColor]; label.textColor = primaryAssigned ? [TBTheme secondaryTextColor] : [TBTheme primaryTextColor]; primaryAssigned = YES; }
+        else if ([view isKindOfClass:[UIButton class]]) { [(UIButton *)view setTitleColor:[TBTheme accentColor] forState:UIControlStateNormal]; [(UIButton *)view setTitleColor:[TBTheme secondaryTextColor] forState:UIControlStateHighlighted]; }
+    }
+}
 
 - (NSString *)durationString:(NSTimeInterval)duration {
     if (duration < 0) duration = 0;

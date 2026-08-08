@@ -29,11 +29,14 @@
         name:TBLibraryPlaylistsDidLoadNotification object:[TBLibraryManager sharedManager]];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(userPlaylistsChanged:)
         name:TBUserPlaylistsDidChangeNotification object:[TBUserPlaylistManager sharedManager]];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(themeChanged:)
+        name:TBThemeDidChangeNotification object:nil];
     if (![[TBLibraryManager sharedManager] playlistsLoaded]) {
         self.tableView.backgroundView = TBCreateLoadingView(@"Loading Playlists…");
         [[TBLibraryManager sharedManager] beginLoadingLibrary];
     }
 }
+- (void)themeChanged:(NSNotification *)notification { [TBTheme styleTableView:self.tableView]; _searchBar.tintColor = [TBTheme searchBackgroundColor]; [self.tableView reloadData]; }
 
 - (void)userPlaylistsChanged:(NSNotification *)notification {
     [_allUserPlaylists release]; _allUserPlaylists = [[[TBUserPlaylistManager sharedManager] playlists] retain];
@@ -100,6 +103,7 @@
     if (cell == nil) cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle
         reuseIdentifier:identifier] autorelease];
     cell.backgroundColor = [TBTheme backgroundColor];
+    cell.detailTextLabel.textColor = [TBTheme secondaryTextColor];
     cell.textLabel.font = [TBTheme primaryFont];
     cell.textLabel.textColor = [TBTheme primaryTextColor];
     if (indexPath.section == 0) {

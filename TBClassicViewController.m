@@ -8,6 +8,7 @@
 #import "TBRecentManager.h"
 #import "TBPlaylistNameViewController.h"
 #import "TBTheme.h"
+#import "TBThemeViewController.h"
 #import "AppDelegate.h"
 
 static const NSInteger TBClassicVisibleRows = 6;
@@ -92,19 +93,21 @@ typedef enum {
             name:TBPlayerQueueDidChangeNotification object:[TBPlayerManager sharedManager]];
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(sharedDataChanged:)
             name:TBLibraryPlaylistsDidLoadNotification object:[TBLibraryManager sharedManager]];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(themeChanged:)
+            name:TBThemeDidChangeNotification object:nil];
     }
     return self;
 }
 
 - (void)loadView {
     UIView *root = [[UIView alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
-    root.backgroundColor = [UIColor colorWithWhite:0.88f alpha:1.0f]; self.view = root; [root release];
+    root.backgroundColor = [TBTheme classicBodyColor]; self.view = root; [root release];
     UIView *display = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, 320, 220)] autorelease];
-    display.backgroundColor = [UIColor colorWithWhite:0.97f alpha:1.0f]; [self.view addSubview:display];
+    display.backgroundColor = [TBTheme classicDisplayColor]; [self.view addSubview:display];
     _titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, 320, 30)];
-    _titleLabel.backgroundColor = [UIColor colorWithWhite:0.90f alpha:1.0f];
+    _titleLabel.backgroundColor = [TBTheme classicHeaderColor];
     _titleLabel.font = [UIFont boldSystemFontOfSize:14];
-    _titleLabel.textColor = [UIColor colorWithWhite:0.15f alpha:1.0f]; [display addSubview:_titleLabel];
+    _titleLabel.textColor = [TBTheme primaryTextColor]; [display addSubview:_titleLabel];
     _rowLabels = [[NSMutableArray alloc] initWithCapacity:TBClassicVisibleRows]; NSInteger i;
     for (i = 0; i < TBClassicVisibleRows; i++) {
         UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(8, 31 + i * 29, 304, 29)];
@@ -112,42 +115,62 @@ typedef enum {
         [display addSubview:label]; [_rowLabels addObject:label]; [label release];
     }
     _statusLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 205, 320, 15)];
-    _statusLabel.backgroundColor = [UIColor colorWithWhite:0.92f alpha:1.0f];
-    _statusLabel.font = [UIFont systemFontOfSize:10]; _statusLabel.textColor = [UIColor darkGrayColor];
+    _statusLabel.backgroundColor = [TBTheme classicHeaderColor];
+    _statusLabel.font = [UIFont systemFontOfSize:10]; _statusLabel.textColor = [TBTheme secondaryTextColor];
     _statusLabel.textAlignment = UITextAlignmentCenter; [display addSubview:_statusLabel];
     _nowPlayingView = [[UIView alloc] initWithFrame:CGRectMake(0, 30, 320, 175)];
-    _nowPlayingView.backgroundColor = [UIColor colorWithWhite:0.97f alpha:1.0f];
+    _nowPlayingView.backgroundColor = [TBTheme classicDisplayColor];
     _nowPlayingView.hidden = YES; [display addSubview:_nowPlayingView];
-    _nowPlayingArtworkView = [[UIImageView alloc] initWithFrame:CGRectMake(10, 8, 100, 100)];
+    _nowPlayingArtworkView = [[UIImageView alloc] initWithFrame:CGRectMake(8, 6, 120, 120)];
     _nowPlayingArtworkView.contentMode = UIViewContentModeScaleAspectFit;
-    _nowPlayingArtworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(100, 100)];
+    _nowPlayingArtworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(120, 120)];
     [_nowPlayingView addSubview:_nowPlayingArtworkView];
-    _nowPlayingTitleLabel = [[UILabel alloc] initWithFrame:CGRectMake(122, 12, 188, 40)];
+    _nowPlayingTitleLabel = [[UILabel alloc] initWithFrame:CGRectMake(138, 10, 172, 42)];
     _nowPlayingTitleLabel.numberOfLines = 2; _nowPlayingTitleLabel.font = [UIFont boldSystemFontOfSize:15];
+    _nowPlayingTitleLabel.textColor = [TBTheme primaryTextColor];
     _nowPlayingTitleLabel.backgroundColor = [UIColor clearColor]; _nowPlayingTitleLabel.lineBreakMode = UILineBreakModeTailTruncation;
     [_nowPlayingView addSubview:_nowPlayingTitleLabel];
-    _nowPlayingArtistLabel = [[UILabel alloc] initWithFrame:CGRectMake(122, 57, 188, 20)];
-    _nowPlayingArtistLabel.font = [UIFont systemFontOfSize:12]; _nowPlayingArtistLabel.textColor = [UIColor darkGrayColor];
+    _nowPlayingArtistLabel = [[UILabel alloc] initWithFrame:CGRectMake(138, 58, 172, 20)];
+    _nowPlayingArtistLabel.font = [UIFont systemFontOfSize:12]; _nowPlayingArtistLabel.textColor = [TBTheme secondaryTextColor];
     _nowPlayingArtistLabel.backgroundColor = [UIColor clearColor]; _nowPlayingArtistLabel.lineBreakMode = UILineBreakModeTailTruncation;
     [_nowPlayingView addSubview:_nowPlayingArtistLabel];
-    _nowPlayingAlbumLabel = [[UILabel alloc] initWithFrame:CGRectMake(122, 79, 188, 20)];
-    _nowPlayingAlbumLabel.font = [UIFont systemFontOfSize:11]; _nowPlayingAlbumLabel.textColor = [UIColor grayColor];
+    _nowPlayingAlbumLabel = [[UILabel alloc] initWithFrame:CGRectMake(138, 80, 172, 20)];
+    _nowPlayingAlbumLabel.font = [UIFont systemFontOfSize:11]; _nowPlayingAlbumLabel.textColor = [TBTheme secondaryTextColor];
     _nowPlayingAlbumLabel.backgroundColor = [UIColor clearColor]; _nowPlayingAlbumLabel.lineBreakMode = UILineBreakModeTailTruncation;
     [_nowPlayingView addSubview:_nowPlayingAlbumLabel];
-    UIView *progressTrack = [[[UIView alloc] initWithFrame:CGRectMake(50, 130, 220, 3)] autorelease];
-    progressTrack.backgroundColor = [UIColor colorWithWhite:0.78f alpha:1.0f]; [_nowPlayingView addSubview:progressTrack];
+    UIView *progressTrack = [[[UIView alloc] initWithFrame:CGRectMake(50, 149, 220, 3)] autorelease];
+    progressTrack.backgroundColor = [TBTheme borderColor]; [_nowPlayingView addSubview:progressTrack];
     _progressFillView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 0, 3)];
-    _progressFillView.backgroundColor = [UIColor colorWithRed:0.18f green:0.42f blue:0.72f alpha:1.0f]; [progressTrack addSubview:_progressFillView];
-    _nowPlayingElapsedLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, 140, 70, 18)];
-    _nowPlayingRemainingLabel = [[UILabel alloc] initWithFrame:CGRectMake(240, 140, 70, 18)];
+    _progressFillView.backgroundColor = [TBTheme accentColor]; [progressTrack addSubview:_progressFillView];
+    _nowPlayingElapsedLabel = [[UILabel alloc] initWithFrame:CGRectMake(5, 140, 42, 18)];
+    _nowPlayingRemainingLabel = [[UILabel alloc] initWithFrame:CGRectMake(273, 140, 42, 18)];
     NSArray *timeLabels = [NSArray arrayWithObjects:_nowPlayingElapsedLabel, _nowPlayingRemainingLabel, nil];
-    NSUInteger timeIndex; for (timeIndex = 0; timeIndex < [timeLabels count]; timeIndex++) { UILabel *label = [timeLabels objectAtIndex:timeIndex]; label.font = [UIFont systemFontOfSize:10]; label.textColor = [UIColor darkGrayColor]; label.backgroundColor = [UIColor clearColor]; }
+    NSUInteger timeIndex; for (timeIndex = 0; timeIndex < [timeLabels count]; timeIndex++) { UILabel *label = [timeLabels objectAtIndex:timeIndex]; label.font = [UIFont systemFontOfSize:10]; label.textColor = [TBTheme secondaryTextColor]; label.backgroundColor = [UIColor clearColor]; }
     _nowPlayingRemainingLabel.textAlignment = UITextAlignmentRight;
     [_nowPlayingView addSubview:_nowPlayingElapsedLabel]; [_nowPlayingView addSubview:_nowPlayingRemainingLabel];
     UIView *divider = [[[UIView alloc] initWithFrame:CGRectMake(0, 219, 320, 1)] autorelease];
-    divider.backgroundColor = [UIColor colorWithWhite:0.55f alpha:1.0f]; [self.view addSubview:divider];
+    divider.backgroundColor = [TBTheme borderColor]; divider.tag = 841; [self.view addSubview:divider];
     _wheelView = [[TBClickWheelView alloc] initWithFrame:CGRectMake(0, 220, 320, 260)];
     _wheelView.delegate = self; [self.view addSubview:_wheelView]; [self updateDisplay];
+}
+
+- (void)themeChanged:(NSNotification *)notification { [self applyTheme]; }
+- (void)applyTheme {
+    self.view.backgroundColor = [TBTheme classicBodyColor];
+    _titleLabel.superview.backgroundColor = [TBTheme classicDisplayColor];
+    _titleLabel.backgroundColor = [TBTheme classicHeaderColor]; _titleLabel.textColor = [TBTheme primaryTextColor];
+    _statusLabel.backgroundColor = [TBTheme classicHeaderColor]; _statusLabel.textColor = [TBTheme secondaryTextColor];
+    _nowPlayingView.backgroundColor = [TBTheme classicDisplayColor];
+    _nowPlayingTitleLabel.textColor = [TBTheme primaryTextColor];
+    MPMediaItem *themeItem = [TBPlayerManager sharedManager].musicPlayer.nowPlayingItem;
+    if (![themeItem valueForProperty:MPMediaItemPropertyArtwork])
+        _nowPlayingArtworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(120, 120)];
+    _nowPlayingArtistLabel.textColor = [TBTheme secondaryTextColor]; _nowPlayingAlbumLabel.textColor = [TBTheme secondaryTextColor];
+    _nowPlayingElapsedLabel.textColor = [TBTheme secondaryTextColor]; _nowPlayingRemainingLabel.textColor = [TBTheme secondaryTextColor];
+    _progressFillView.backgroundColor = [TBTheme accentColor]; _progressFillView.superview.backgroundColor = [TBTheme borderColor];
+    [[self.view viewWithTag:841] setBackgroundColor:[TBTheme borderColor]];
+    _wheelView.backgroundColor = [TBTheme classicBodyColor]; [_wheelView setNeedsDisplay];
+    [self updateDisplay];
 }
 
 - (void)viewDidAppear:(BOOL)animated {
@@ -277,8 +300,8 @@ typedef enum {
         if (itemIndex < count) {
             BOOL selected = itemIndex == _selectedIndex; id item = [_currentItems objectAtIndex:(NSUInteger)itemIndex];
             NSString *title = [self titleForItem:item atIndex:itemIndex];
-            label.hidden = NO; label.backgroundColor = selected ? [UIColor colorWithRed:0.18f green:0.42f blue:0.72f alpha:1.0f] : [UIColor clearColor];
-            label.textColor = selected ? [UIColor whiteColor] : [UIColor colorWithWhite:0.12f alpha:1.0f];
+            label.hidden = NO; label.backgroundColor = selected ? [TBTheme selectionColor] : [UIColor clearColor];
+            label.textColor = selected ? [UIColor whiteColor] : [TBTheme primaryTextColor];
             label.text = [NSString stringWithFormat:@"  %@%@", title, [self itemIsSubmenuAtIndex:itemIndex] ? @"  >" : @""];
         } else label.hidden = YES;
     }
@@ -339,7 +362,7 @@ typedef enum {
             else _statusLabel.text = @"Nothing is playing";
         }
         else [self pushScreen:TBClassicScreenSettings title:@"Settings"
-            items:[NSArray arrayWithObject:@"Standard Mode"]];
+            items:[NSArray arrayWithObjects:@"Theme", @"Standard Mode", nil]];
     } else if (_screenType == TBClassicScreenMusic) {
         if (_selectedIndex == 0) [self pushScreen:TBClassicScreenArtists title:@"Artists"
             items:[[TBLibraryManager sharedManager] artistGroups]];
@@ -399,7 +422,12 @@ typedef enum {
         if ([item isKindOfClass:[NSString class]]) [self presentPlaylistNameForCurrentItem:YES];
         else { BOOL added = [[TBUserPlaylistManager sharedManager] addItem:[TBPlayerManager sharedManager].musicPlayer.nowPlayingItem toPlaylistID:[item objectForKey:TBUserPlaylistIDKey]]; _statusLabel.text = added ? @"Added to playlist" : @"Already in playlist"; }
     } else if (_screenType == TBClassicScreenSettings) {
-        [(AppDelegate *)[UIApplication sharedApplication].delegate showStandardMode];
+        if (_selectedIndex == 0) {
+            TBThemeViewController *theme = [[TBThemeViewController alloc] initWithDismissButton:YES];
+            UINavigationController *navigation = [[UINavigationController alloc] initWithRootViewController:theme];
+            navigation.navigationBar.tintColor = [TBTheme navigationBarColor]; [theme release];
+            [self presentModalViewController:navigation animated:YES]; [navigation release];
+        } else [(AppDelegate *)[UIApplication sharedApplication].delegate showStandardMode];
     }
 }
 
@@ -432,12 +460,12 @@ typedef enum {
     _nowPlayingAlbumLabel.text = album ? album : @"Unknown Album";
     NSInteger queueIndex = manager.currentQueueIndex; NSInteger queueCount = (NSInteger)[manager.queueItems count];
     _titleLabel.text = queueIndex == NSNotFound ? @"  Now Playing" : [NSString stringWithFormat:@"  Now Playing                         %ld/%ld", (long)queueIndex + 1, (long)queueCount];
-    _nowPlayingArtworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(100, 100)];
+    _nowPlayingArtworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(120, 120)];
     NSNumber *number = [item valueForProperty:MPMediaItemPropertyPersistentID];
     [_nowPlayingArtworkKey release]; _nowPlayingArtworkKey = number ? [[NSString stringWithFormat:@"%llu", [number unsignedLongLongValue]] copy] : nil;
     UIImage *image = [[TBArtworkCache sharedCache] cachedImageForKey:_nowPlayingArtworkKey];
     if (image) _nowPlayingArtworkView.image = image;
-    else if (item) [[TBArtworkCache sharedCache] requestImageForItem:item size:CGSizeMake(100, 100)
+    else if (item) [[TBArtworkCache sharedCache] requestImageForItem:item size:CGSizeMake(120, 120)
         key:_nowPlayingArtworkKey target:self selector:@selector(nowPlayingArtworkLoaded:)];
     [self updateProgress];
 }

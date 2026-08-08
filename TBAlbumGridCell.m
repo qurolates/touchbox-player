@@ -43,6 +43,10 @@
 
 - (void)configureWithAlbum:(NSDictionary *)album {
     [self resetContent];
+    self.backgroundColor = [TBTheme backgroundColor];
+    _titleLabel.backgroundColor = [TBTheme backgroundColor]; _titleLabel.textColor = [TBTheme primaryTextColor];
+    _artistLabel.backgroundColor = [TBTheme backgroundColor]; _artistLabel.textColor = [TBTheme secondaryTextColor];
+    _artworkView.backgroundColor = [TBTheme placeholderColor];
     self.hidden = NO;
     self.album = album;
     _titleLabel.text = [album objectForKey:TBAlbumTitleKey];
