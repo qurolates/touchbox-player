@@ -1,5 +1,6 @@
 #import "TBLibraryManager.h"
 #import "TBRecentManager.h"
+#import "TBPerformance.h"
 
 NSString *const TBLibrarySongsDidLoadNotification = @"TBLibrarySongsDidLoadNotification";
 NSString *const TBLibraryIndexDidLoadNotification = @"TBLibraryIndexDidLoadNotification";
@@ -104,7 +105,7 @@ static NSInteger TBNameDictionarySort(id left, id right, void *context) {
     NSString *path = [self cachePath];
     NSData *data = path ? [NSData dataWithContentsOfFile:path] : nil;
     if (data == nil) {
-        NSLog(@"Touchbox cache: no persistent library index");
+        TBPerformanceLog(@"Touchbox cache: no persistent library index");
         return;
     }
     NSString *error = nil;
@@ -125,11 +126,11 @@ static NSInteger TBNameDictionarySort(id left, id right, void *context) {
             [identifiers sortUsingSelector:@selector(compare:)];
             _cachedSongIDs = [identifiers copy];
         } else _cachedSongIDs = [storedSignature retain];
-        NSLog(@"Touchbox timing: persistent index load %.3f sec artists=%lu bytes=%lu",
+        TBPerformanceLog(@"Touchbox timing: persistent index load %.3f sec artists=%lu bytes=%lu",
               [NSDate timeIntervalSinceReferenceDate] - start,
               (unsigned long)[_artistGroups count], (unsigned long)[data length]);
     } else {
-        NSLog(@"Touchbox cache: ignored invalid index error=%@", error);
+        TBPerformanceLog(@"Touchbox cache: ignored invalid index error=%@", error);
     }
     [error release];
 }
@@ -159,19 +160,19 @@ static NSInteger TBNameDictionarySort(id left, id right, void *context) {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     NSTimeInterval totalStart = [NSDate timeIntervalSinceReferenceDate];
     NSTimeInterval stageStart = [NSDate timeIntervalSinceReferenceDate];
-    NSLog(@"Touchbox: songsQuery begin");
+    TBPerformanceLog(@"Touchbox: songsQuery begin");
     MPMediaQuery *songsQuery = [MPMediaQuery songsQuery];
-    NSLog(@"Touchbox timing: songs MPMediaQuery creation %.3f sec",
+    TBPerformanceLog(@"Touchbox timing: songs MPMediaQuery creation %.3f sec",
           [NSDate timeIntervalSinceReferenceDate] - stageStart);
     stageStart = [NSDate timeIntervalSinceReferenceDate];
     NSArray *queriedSongs = [songsQuery items];
     NSArray *songs = queriedSongs ? queriedSongs : [NSArray array];
-    NSLog(@"Touchbox timing: songs items fetch %.3f sec count=%lu",
+    TBPerformanceLog(@"Touchbox timing: songs items fetch %.3f sec count=%lu",
           [NSDate timeIntervalSinceReferenceDate] - stageStart, (unsigned long)[songs count]);
-    NSLog(@"Touchbox: songsQuery end songs count=%lu", (unsigned long)[songs count]);
+    TBPerformanceLog(@"Touchbox: songsQuery end songs count=%lu", (unsigned long)[songs count]);
     stageStart = [NSDate timeIntervalSinceReferenceDate];
     songs = [songs sortedArrayUsingFunction:TBSongTitleSort context:NULL];
-    NSLog(@"Touchbox timing: songs title sorting %.3f sec",
+    TBPerformanceLog(@"Touchbox timing: songs title sorting %.3f sec",
           [NSDate timeIntervalSinceReferenceDate] - stageStart);
     @synchronized(self) { _songs = [songs retain]; }
     [self performSelectorOnMainThread:@selector(postSongsReady) withObject:nil waitUntilDone:NO];
@@ -185,14 +186,14 @@ static NSInteger TBNameDictionarySort(id left, id right, void *context) {
     }
     [[TBRecentManager sharedManager] updateFirstSeenWithItems:songs];
     BOOL cacheMatches = (_cachedSongIDs != nil && [_cachedSongIDs isEqualToArray:currentSongIDs]);
-    NSLog(@"Touchbox timing: library identity check %.3f sec changed=%@",
+    TBPerformanceLog(@"Touchbox timing: library identity check %.3f sec changed=%@",
           [NSDate timeIntervalSinceReferenceDate] - stageStart, cacheMatches ? @"NO" : @"YES");
 
     NSArray *groups;
     if (cacheMatches) {
         stageStart = [NSDate timeIntervalSinceReferenceDate];
         groups = [self hydrateGroups:_artistGroups itemsByID:itemsByID];
-        NSLog(@"Touchbox timing: cached index hydration %.3f sec",
+        TBPerformanceLog(@"Touchbox timing: cached index hydration %.3f sec",
               [NSDate timeIntervalSinceReferenceDate] - stageStart);
     } else {
         groups = [self buildGroupsFromSongs:songs];
@@ -208,16 +209,16 @@ static NSInteger TBNameDictionarySort(id left, id right, void *context) {
 
     stageStart = [NSDate timeIntervalSinceReferenceDate];
     MPMediaQuery *playlistsQuery = [MPMediaQuery playlistsQuery];
-    NSLog(@"Touchbox timing: playlists MPMediaQuery creation %.3f sec",
+    TBPerformanceLog(@"Touchbox timing: playlists MPMediaQuery creation %.3f sec",
           [NSDate timeIntervalSinceReferenceDate] - stageStart);
     stageStart = [NSDate timeIntervalSinceReferenceDate];
     NSArray *queriedPlaylists = [playlistsQuery collections];
     NSArray *playlists = queriedPlaylists ? queriedPlaylists : [NSArray array];
-    NSLog(@"Touchbox timing: playlist collections fetch %.3f sec count=%lu",
+    TBPerformanceLog(@"Touchbox timing: playlist collections fetch %.3f sec count=%lu",
           [NSDate timeIntervalSinceReferenceDate] - stageStart, (unsigned long)[playlists count]);
     @synchronized(self) { _playlists = [playlists retain]; _loading = NO; }
     [self performSelectorOnMainThread:@selector(postPlaylistsReady) withObject:nil waitUntilDone:NO];
-    NSLog(@"Touchbox timing: complete library preparation %.3f sec",
+    TBPerformanceLog(@"Touchbox timing: complete library preparation %.3f sec",
           [NSDate timeIntervalSinceReferenceDate] - totalStart);
     [pool drain];
 }
@@ -268,7 +269,7 @@ static NSInteger TBNameDictionarySort(id left, id right, void *context) {
         if (!tracks) { tracks = [NSMutableArray array]; [albums setObject:tracks forKey:albumTitle]; }
         [tracks addObject:item];
     }
-    NSLog(@"Touchbox timing: grouping one-pass %.3f sec artists=%lu",
+    TBPerformanceLog(@"Touchbox timing: grouping one-pass %.3f sec artists=%lu",
           [NSDate timeIntervalSinceReferenceDate] - stageStart, (unsigned long)[artists count]);
 
     stageStart = [NSDate timeIntervalSinceReferenceDate];
@@ -293,7 +294,7 @@ static NSInteger TBNameDictionarySort(id left, id right, void *context) {
         [groups addObject:[NSMutableDictionary dictionaryWithObjectsAndKeys:
             artist, TBArtistNameKey, albums, TBAlbumsKey, nil]];
     }
-    NSLog(@"Touchbox timing: model arrays %.3f sec", [NSDate timeIntervalSinceReferenceDate] - stageStart);
+    TBPerformanceLog(@"Touchbox timing: model arrays %.3f sec", [NSDate timeIntervalSinceReferenceDate] - stageStart);
     stageStart = [NSDate timeIntervalSinceReferenceDate];
     for (index = 0; index < [groups count]; index++) {
         NSMutableArray *albums = [[groups objectAtIndex:index] objectForKey:TBAlbumsKey];
@@ -320,7 +321,7 @@ static NSInteger TBNameDictionarySort(id left, id right, void *context) {
         [albums sortUsingFunction:TBNameDictionarySort context:(void *)TBAlbumTitleKey];
     }
     [groups sortUsingFunction:TBNameDictionarySort context:(void *)TBArtistNameKey];
-    NSLog(@"Touchbox timing: sorting %.3f sec", [NSDate timeIntervalSinceReferenceDate] - stageStart);
+    TBPerformanceLog(@"Touchbox timing: sorting %.3f sec", [NSDate timeIntervalSinceReferenceDate] - stageStart);
     return groups;
 }
 
@@ -377,7 +378,7 @@ static NSInteger TBNameDictionarySort(id left, id right, void *context) {
     NSData *data = [NSPropertyListSerialization dataFromPropertyList:root
         format:NSPropertyListBinaryFormat_v1_0 errorDescription:&error];
     BOOL saved = data && [data writeToFile:[self cachePath] atomically:YES];
-    NSLog(@"Touchbox timing: persistent index save %.3f sec bytes=%lu success=%@ error=%@",
+    TBPerformanceLog(@"Touchbox timing: persistent index save %.3f sec bytes=%lu success=%@ error=%@",
           [NSDate timeIntervalSinceReferenceDate] - start, (unsigned long)[data length],
           saved ? @"YES" : @"NO", error);
     [error release];

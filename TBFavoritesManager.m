@@ -1,4 +1,5 @@
 #import "TBFavoritesManager.h"
+#import "TBPerformance.h"
 
 NSString *const TBFavoritesDidChangeNotification = @"TBFavoritesDidChangeNotification";
 static NSString *const TBFavoritesDefaultsKey = @"TBFavoritePersistentIDs";
@@ -40,11 +41,11 @@ static NSString *const TBFavoritesDefaultsKey = @"TBFavoritePersistentIDs";
                 break;
             }
         }
-        NSLog(@"Touchbox: favorite removed persistentID=%@", key);
+        TBPerformanceLog(@"Touchbox: favorite removed persistentID=%@", key);
     } else {
         [_persistentIDs addObject:key];
         if (_resolvedItems) [_resolvedItems addObject:item];
-        NSLog(@"Touchbox: favorite added persistentID=%@", key);
+        TBPerformanceLog(@"Touchbox: favorite added persistentID=%@", key);
     }
     [[NSUserDefaults standardUserDefaults] setObject:_persistentIDs forKey:TBFavoritesDefaultsKey];
     [[NSUserDefaults standardUserDefaults] synchronize];
@@ -74,7 +75,7 @@ static NSString *const TBFavoritesDefaultsKey = @"TBFavoritePersistentIDs";
             [items addObject:item];
             [validIDs addObject:key];
         } else {
-            NSLog(@"Touchbox: removing orphaned favorite persistentID=%@", key);
+            TBPerformanceLog(@"Touchbox: removing orphaned favorite persistentID=%@", key);
         }
     }
     if ([validIDs count] != [_persistentIDs count]) {
@@ -83,7 +84,7 @@ static NSString *const TBFavoritesDefaultsKey = @"TBFavoritePersistentIDs";
         [[NSUserDefaults standardUserDefaults] synchronize];
     }
     _resolvedItems = [items mutableCopy];
-    NSLog(@"Touchbox timing: favorites initial resolve %.3f sec favorites=%lu",
+    TBPerformanceLog(@"Touchbox timing: favorites initial resolve %.3f sec favorites=%lu",
           [NSDate timeIntervalSinceReferenceDate] - start, (unsigned long)[_resolvedItems count]);
     return _resolvedItems;
 }

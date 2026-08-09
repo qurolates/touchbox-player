@@ -1,4 +1,5 @@
 #import "TBUserPlaylistManager.h"
+#import "TBPerformance.h"
 
 NSString *const TBUserPlaylistsDidChangeNotification = @"TBUserPlaylistsDidChangeNotification";
 NSString *const TBUserPlaylistIDKey = @"id";
@@ -43,7 +44,7 @@ NSString *const TBUserPlaylistTrackIDsKey = @"trackPersistentIDs";
     NSData *data = [NSPropertyListSerialization dataFromPropertyList:_playlists
         format:NSPropertyListBinaryFormat_v1_0 errorDescription:&error];
     BOOL saved = data && [data writeToFile:[self storagePath] atomically:YES];
-    NSLog(@"Touchbox: user playlists saved=%@ count=%lu error=%@",
+    TBPerformanceLog(@"Touchbox: user playlists saved=%@ count=%lu error=%@",
         saved ? @"YES" : @"NO", (unsigned long)[_playlists count], error);
     [error release];
     [[NSNotificationCenter defaultCenter]

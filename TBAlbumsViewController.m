@@ -9,6 +9,7 @@
 #import "TBAlphabeticIndex.h"
 #import "TBAlphabetIndexView.h"
 #import "TBRecentViewController.h"
+#import "TBPerformance.h"
 
 @implementation TBAlbumsViewController
 
@@ -192,7 +193,7 @@
 
 - (void)didReceiveMemoryWarning {
     [[TBArtworkCache sharedCache] removeAllImages];
-    NSLog(@"Touchbox: cleared album thumbnail cache after memory warning");
+    TBPerformanceLog(@"Touchbox: cleared album thumbnail cache after memory warning");
     [super didReceiveMemoryWarning];
 }
 

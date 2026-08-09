@@ -7,6 +7,7 @@
 #import "TBUserPlaylistManager.h"
 #import "TBUserPlaylistViewController.h"
 #import "TBPlaylistNameViewController.h"
+#import "TBPerformance.h"
 
 @implementation TBPlaylistsViewController
 
@@ -155,7 +156,7 @@
     NSTimeInterval start = [NSDate timeIntervalSinceReferenceDate];
     MPMediaPlaylist *playlist = [request objectForKey:@"playlist"];
     NSArray *items = [playlist items];
-    NSLog(@"Touchbox timing: selected playlist items fetch %.3f sec count=%lu",
+    TBPerformanceLog(@"Touchbox timing: selected playlist items fetch %.3f sec count=%lu",
           [NSDate timeIntervalSinceReferenceDate] - start, (unsigned long)[items count]);
     NSDictionary *result = [[NSDictionary alloc] initWithObjectsAndKeys:
         (items ? items : [NSArray array]), @"items", [request objectForKey:@"name"], @"name", nil];

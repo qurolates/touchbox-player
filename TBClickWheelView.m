@@ -1,6 +1,7 @@
 #import "TBClickWheelView.h"
 #import <math.h>
 #import "TBTheme.h"
+#import "TBPerformance.h"
 
 static const CGFloat TBWheelRadius = 105.0f;
 static const CGFloat TBCenterRadius = 42.0f;
@@ -69,28 +70,28 @@ static const CGFloat TBStepThreshold = 0.26f;
     }
 }
 
-- (void)resetTouchState { _activeTouch = nil; _pressedRegion = TBClickWheelRegionNone; _rotating = NO; _accumulatedAngle = 0; _totalAngularMovement = 0; [self setNeedsDisplay]; }
+- (void)resetTouchState { BOOL visualChange = _pressedRegion != TBClickWheelRegionNone && _pressedRegion != TBClickWheelRegionRing; _activeTouch = nil; _pressedRegion = TBClickWheelRegionNone; _rotating = NO; _accumulatedAngle = 0; _totalAngularMovement = 0; if (visualChange) [self setNeedsDisplay]; }
 - (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event {
     if (_activeTouch || [touches count] != 1) return; UITouch *touch = [touches anyObject]; CGPoint point = [touch locationInView:self]; CGFloat distance = [self distanceForPoint:point];
     if (distance > TBWheelRadius) return; _activeTouch = touch; _previousAngle = [self angleForPoint:point]; _accumulatedAngle = 0; _totalAngularMovement = 0; _rotating = NO;
-    _pressedRegion = distance < TBCenterRadius ? TBClickWheelRegionCenter : [self buttonRegionForAngle:_previousAngle]; [self setNeedsDisplay];
+    _pressedRegion = distance < TBCenterRadius ? TBClickWheelRegionCenter : [self buttonRegionForAngle:_previousAngle]; if (_pressedRegion != TBClickWheelRegionRing) [self setNeedsDisplay];
 }
 - (void)touchesMoved:(NSSet *)touches withEvent:(UIEvent *)event {
     if (!_activeTouch || ![touches containsObject:_activeTouch]) return; CGPoint point = [_activeTouch locationInView:self]; CGFloat distance = [self distanceForPoint:point];
-    if (distance < TBCenterRadius) { if (_pressedRegion != TBClickWheelRegionCenter) _pressedRegion = TBClickWheelRegionNone; [self setNeedsDisplay]; return; }
-    if (distance > TBWheelRadius) { _pressedRegion = TBClickWheelRegionNone; _previousAngle = [self angleForPoint:point]; [self setNeedsDisplay]; return; }
+    if (distance < TBCenterRadius) { if (_pressedRegion != TBClickWheelRegionCenter && _pressedRegion != TBClickWheelRegionNone) { _pressedRegion = TBClickWheelRegionNone; [self setNeedsDisplay]; } return; }
+    if (distance > TBWheelRadius) { if (_pressedRegion != TBClickWheelRegionNone) { _pressedRegion = TBClickWheelRegionNone; [self setNeedsDisplay]; } _previousAngle = [self angleForPoint:point]; return; }
     CGFloat angle = [self angleForPoint:point]; CGFloat delta = [self normalizedDelta:angle - _previousAngle]; _previousAngle = angle; _totalAngularMovement += fabsf(delta);
-    if (_totalAngularMovement > 0.10f) { _rotating = YES; _pressedRegion = TBClickWheelRegionNone; }
+    if (_totalAngularMovement > 0.10f) { _rotating = YES; if (_pressedRegion != TBClickWheelRegionNone) { _pressedRegion = TBClickWheelRegionNone; [self setNeedsDisplay]; } }
     _accumulatedAngle += delta; NSInteger steps = 0;
     while (_accumulatedAngle >= TBStepThreshold) { steps++; _accumulatedAngle -= TBStepThreshold; }
     while (_accumulatedAngle <= -TBStepThreshold) { steps--; _accumulatedAngle += TBStepThreshold; }
-    if (steps) { NSLog(@"Touchbox Classic: Wheel %@%ld", steps > 0 ? @"+" : @"", (long)steps); [_delegate clickWheel:self didRotateBySteps:steps]; }
-    [self setNeedsDisplay];
+    if (steps) { TBPerformanceLog(@"Touchbox Classic: Wheel %@%ld", steps > 0 ? @"+" : @"", (long)steps); [_delegate clickWheel:self didRotateBySteps:steps]; }
 }
 - (void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event {
     if (!_activeTouch || ![touches containsObject:_activeTouch]) return; TBClickWheelRegion region = _pressedRegion; BOOL activate = !_rotating;
     if (activate) { if (region == TBClickWheelRegionCenter) [_delegate clickWheelDidSelect:self]; else if (region == TBClickWheelRegionMenu) [_delegate clickWheelDidPressMenu:self]; else if (region == TBClickWheelRegionPrevious) [_delegate clickWheelDidPressPrevious:self]; else if (region == TBClickWheelRegionNext) [_delegate clickWheelDidPressNext:self]; else if (region == TBClickWheelRegionPlayPause) [_delegate clickWheelDidPressPlayPause:self]; }
+    else [_delegate clickWheelDidEndRotation:self];
     [self resetTouchState];
 }
-- (void)touchesCancelled:(NSSet *)touches withEvent:(UIEvent *)event { if (_activeTouch && [touches containsObject:_activeTouch]) [self resetTouchState]; }
+- (void)touchesCancelled:(NSSet *)touches withEvent:(UIEvent *)event { if (_activeTouch && [touches containsObject:_activeTouch]) { if (_rotating) [_delegate clickWheelDidEndRotation:self]; [self resetTouchState]; } }
 @end

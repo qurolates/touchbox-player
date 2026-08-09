@@ -10,6 +10,8 @@ extern NSString *const TBPlayerQueueDidChangeNotification;
     NSInteger _currentQueueIndex;
     BOOL _shuffleEnabled;
     BOOL _repeatOneEnabled;
+    NSDictionary *_lastSavedState;
+    BOOL _interactiveSeek;
 }
 
 @property(nonatomic, retain, readonly) MPMusicPlayerController *musicPlayer;
@@ -28,6 +30,9 @@ extern NSString *const TBPlayerQueueDidChangeNotification;
 - (void)previous;
 - (void)next;
 - (void)seekToTime:(NSTimeInterval)time;
+- (void)seekToTimeWithoutSaving:(NSTimeInterval)time;
+- (void)beginInteractiveSeek;
+- (void)endInteractiveSeek;
 - (void)playQueueItemAtIndex:(NSInteger)index;
 - (void)toggleShuffle;
 - (void)toggleRepeatOne;

@@ -10,6 +10,8 @@
 #import "TBTheme.h"
 #import "TBThemeViewController.h"
 #import "AppDelegate.h"
+#import "TBPerformance.h"
+#import <math.h>
 
 static const NSInteger TBClassicVisibleRows = 6;
 static NSString *const TBClassicStateTypeKey = @"type";
@@ -95,6 +97,10 @@ typedef enum {
             name:TBLibraryPlaylistsDidLoadNotification object:[TBLibraryManager sharedManager]];
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(themeChanged:)
             name:TBThemeDidChangeNotification object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidEnterBackground:)
+            name:UIApplicationDidEnterBackgroundNotification object:nil];
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(applicationDidBecomeActive:)
+            name:UIApplicationDidBecomeActiveNotification object:nil];
     }
     return self;
 }
@@ -108,6 +114,12 @@ typedef enum {
     _titleLabel.backgroundColor = [TBTheme classicHeaderColor];
     _titleLabel.font = [UIFont boldSystemFontOfSize:14];
     _titleLabel.textColor = [TBTheme primaryTextColor]; [display addSubview:_titleLabel];
+    _queuePositionLabel = [[UILabel alloc] initWithFrame:CGRectMake(260, 0, 52, 30)];
+    _queuePositionLabel.backgroundColor = [UIColor clearColor];
+    _queuePositionLabel.font = [UIFont boldSystemFontOfSize:12];
+    _queuePositionLabel.textAlignment = UITextAlignmentRight;
+    _queuePositionLabel.textColor = [TBTheme secondaryTextColor];
+    _queuePositionLabel.hidden = YES; [display addSubview:_queuePositionLabel];
     _rowLabels = [[NSMutableArray alloc] initWithCapacity:TBClassicVisibleRows]; NSInteger i;
     for (i = 0; i < TBClassicVisibleRows; i++) {
         UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(8, 31 + i * 29, 304, 29)];
@@ -154,11 +166,12 @@ typedef enum {
     _wheelView.delegate = self; [self.view addSubview:_wheelView]; [self updateDisplay];
 }
 
-- (void)themeChanged:(NSNotification *)notification { [self applyTheme]; }
+- (void)themeChanged:(NSNotification *)notification { if (_visible && [UIApplication sharedApplication].applicationState == UIApplicationStateActive) [self applyTheme]; }
 - (void)applyTheme {
     self.view.backgroundColor = [TBTheme classicBodyColor];
     _titleLabel.superview.backgroundColor = [TBTheme classicDisplayColor];
     _titleLabel.backgroundColor = [TBTheme classicHeaderColor]; _titleLabel.textColor = [TBTheme primaryTextColor];
+    _queuePositionLabel.textColor = [TBTheme secondaryTextColor];
     _statusLabel.backgroundColor = [TBTheme classicHeaderColor]; _statusLabel.textColor = [TBTheme secondaryTextColor];
     _nowPlayingView.backgroundColor = [TBTheme classicDisplayColor];
     _nowPlayingTitleLabel.textColor = [TBTheme primaryTextColor];
@@ -173,9 +186,30 @@ typedef enum {
     [self updateDisplay];
 }
 
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    _visible = YES;
+    [self applyTheme];
+}
 - (void)viewDidAppear:(BOOL)animated {
     [super viewDidAppear:animated];
-    NSLog(@"Touchbox Classic: enter Phase 2 navigation, screen=%@", _screenTitle);
+    TBPerformanceLog(@"Touchbox Classic: visible screen=%@", _screenTitle);
+}
+- (void)viewWillDisappear:(BOOL)animated {
+    if (_classicSeekChanged) {
+        [[TBPlayerManager sharedManager] endInteractiveSeek];
+        _classicSeekChanged = NO;
+    }
+    _visible = NO;
+    [self stopProgressTimer];
+    [super viewWillDisappear:animated];
+}
+- (void)applicationDidEnterBackground:(NSNotification *)notification { [self stopProgressTimer]; }
+- (void)applicationDidBecomeActive:(NSNotification *)notification {
+    if (_visible && _screenType == TBClassicScreenNowPlaying) {
+        [self updateNowPlaying];
+        [self startProgressTimer];
+    }
 }
 
 - (NSArray *)allAlbums {
@@ -286,9 +320,10 @@ typedef enum {
     _titleLabel.text = [NSString stringWithFormat:@"  %@", _screenTitle];
     BOOL nowPlaying = _screenType == TBClassicScreenNowPlaying;
     _nowPlayingView.hidden = !nowPlaying; _statusLabel.hidden = nowPlaying;
+    _queuePositionLabel.hidden = !nowPlaying;
     NSInteger hiddenRow; for (hiddenRow = 0; hiddenRow < TBClassicVisibleRows; hiddenRow++)
         ((UILabel *)[_rowLabels objectAtIndex:(NSUInteger)hiddenRow]).hidden = nowPlaying;
-    if (nowPlaying) { [self updateNowPlaying]; [self startProgressTimer]; return; }
+    if (nowPlaying) { [self updateNowPlaying]; if (_visible) [self startProgressTimer]; return; }
     [self stopProgressTimer];
     NSInteger count = (NSInteger)[_currentItems count];
     if (count == 0) _selectedIndex = 0; else if (_selectedIndex >= count) _selectedIndex = count - 1;
@@ -319,12 +354,12 @@ typedef enum {
     [_screenTitle release]; _screenTitle = [title copy];
     [_currentItems release]; _currentItems = [(items ? items : [NSArray array]) retain];
     _screenType = type; _selectedIndex = 0;
-    NSLog(@"Touchbox Classic screen: %@", title); [self updateDisplay];
+    TBPerformanceLog(@"Touchbox Classic screen: %@", title); [self updateDisplay];
 }
 
 - (void)popScreen {
     if (![_navigationStack count]) {
-        NSLog(@"Touchbox Classic: Menu at root, returning to Standard");
+        TBPerformanceLog(@"Touchbox Classic: Menu at root, returning to Standard");
         [(AppDelegate *)[UIApplication sharedApplication].delegate showStandardMode]; return;
     }
     NSDictionary *state = [[_navigationStack lastObject] retain]; [_navigationStack removeLastObject];
@@ -334,7 +369,7 @@ typedef enum {
     _selectedIndex = [[state objectForKey:TBClassicStateSelectionKey] integerValue];
     if (_screenType == TBClassicScreenArtists) { [_currentItems release]; _currentItems = [[[TBLibraryManager sharedManager] artistGroups] retain]; }
     else if (_screenType == TBClassicScreenAlbums) { [_currentItems release]; _currentItems = [[self allAlbums] retain]; }
-    [state release]; NSLog(@"Touchbox Classic: Menu back to %@", _screenTitle); [self updateDisplay];
+    [state release]; TBPerformanceLog(@"Touchbox Classic: Menu back to %@", _screenTitle); [self updateDisplay];
 }
 
 - (void)selectCurrentItem {
@@ -345,7 +380,7 @@ typedef enum {
     }
     if (![_currentItems count]) return;
     id item = [_currentItems objectAtIndex:(NSUInteger)_selectedIndex];
-    NSLog(@"Touchbox Classic: Center selected: %@", [self titleForItem:item atIndex:_selectedIndex]);
+    TBPerformanceLog(@"Touchbox Classic: Center selected: %@", [self titleForItem:item atIndex:_selectedIndex]);
     if (_screenType == TBClassicScreenRoot) {
         [[NSUserDefaults standardUserDefaults] setInteger:_selectedIndex forKey:TBClassicRootSelectionDefaultsKey];
         if (_selectedIndex == 0) [self pushScreen:TBClassicScreenMusic title:@"Music"
@@ -437,13 +472,19 @@ typedef enum {
         (unsigned)(seconds / 60), (unsigned)(seconds % 60)];
 }
 - (void)startProgressTimer {
-    if (_progressTimer) return;
+    if (_progressTimer || !_visible ||
+        [UIApplication sharedApplication].applicationState != UIApplicationStateActive) return;
     _progressTimer = [[NSTimer scheduledTimerWithTimeInterval:1.0 target:self
         selector:@selector(progressTimerFired:) userInfo:nil repeats:YES] retain];
 }
 - (void)stopProgressTimer { [_progressTimer invalidate]; [_progressTimer release]; _progressTimer = nil; }
-- (void)progressTimerFired:(NSTimer *)timer { [self updateProgress]; }
+- (void)progressTimerFired:(NSTimer *)timer {
+    if (!_visible || !self.view.window || _screenType != TBClassicScreenNowPlaying ||
+        [UIApplication sharedApplication].applicationState != UIApplicationStateActive) { [self stopProgressTimer]; return; }
+    [self updateProgress];
+}
 - (void)updateProgress {
+    if (!_visible || !self.view.window || _screenType != TBClassicScreenNowPlaying) return;
     MPMusicPlayerController *player = [TBPlayerManager sharedManager].musicPlayer;
     NSTimeInterval duration = [[player.nowPlayingItem valueForProperty:MPMediaItemPropertyPlaybackDuration] doubleValue];
     NSTimeInterval elapsed = player.currentPlaybackTime; if (elapsed < 0) elapsed = 0;
@@ -459,7 +500,9 @@ typedef enum {
     _nowPlayingArtistLabel.text = artist ? artist : @"Unknown Artist";
     _nowPlayingAlbumLabel.text = album ? album : @"Unknown Album";
     NSInteger queueIndex = manager.currentQueueIndex; NSInteger queueCount = (NSInteger)[manager.queueItems count];
-    _titleLabel.text = queueIndex == NSNotFound ? @"  Now Playing" : [NSString stringWithFormat:@"  Now Playing                         %ld/%ld", (long)queueIndex + 1, (long)queueCount];
+    _titleLabel.text = @"  Now Playing";
+    _queuePositionLabel.text = queueIndex == NSNotFound ? @"" :
+        [NSString stringWithFormat:@"%ld/%ld", (long)queueIndex + 1, (long)queueCount];
     _nowPlayingArtworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(120, 120)];
     NSNumber *number = [item valueForProperty:MPMediaItemPropertyPersistentID];
     [_nowPlayingArtworkKey release]; _nowPlayingArtworkKey = number ? [[NSString stringWithFormat:@"%llu", [number unsignedLongLongValue]] copy] : nil;
@@ -470,12 +513,13 @@ typedef enum {
     [self updateProgress];
 }
 - (void)nowPlayingArtworkLoaded:(NSDictionary *)result {
+    if (!_visible || !self.view.window || _screenType != TBClassicScreenNowPlaying) return;
     if (![_nowPlayingArtworkKey isEqualToString:[result objectForKey:@"key"]]) return;
     id image = [result objectForKey:@"image"];
     if (image != [NSNull null]) _nowPlayingArtworkView.image = image;
 }
-- (void)playerItemChanged:(NSNotification *)notification { if (_screenType == TBClassicScreenNowPlaying) [self updateNowPlaying]; }
-- (void)playerStateChanged:(NSNotification *)notification { if (_screenType == TBClassicScreenNowPlaying) [self updateProgress]; }
+- (void)playerItemChanged:(NSNotification *)notification { if (_visible && self.view.window && [UIApplication sharedApplication].applicationState == UIApplicationStateActive && _screenType == TBClassicScreenNowPlaying) [self updateNowPlaying]; }
+- (void)playerStateChanged:(NSNotification *)notification { if (_visible && self.view.window && [UIApplication sharedApplication].applicationState == UIApplicationStateActive && _screenType == TBClassicScreenNowPlaying) [self updateProgress]; }
 
 - (void)libraryIndexReady:(NSNotification *)notification {
     if (_screenType == TBClassicScreenArtists) { [_currentItems release]; _currentItems = [[[TBLibraryManager sharedManager] artistGroups] retain]; }
@@ -489,10 +533,10 @@ typedef enum {
             }
         }
     }
-    [self updateDisplay];
+    if (_visible && [UIApplication sharedApplication].applicationState == UIApplicationStateActive) [self updateDisplay];
 }
 - (void)librarySongsReady:(NSNotification *)notification {
-    if (_screenType == TBClassicScreenSongs) { [_currentItems release]; _currentItems = [[self shuffleListWithTracks:[[TBLibraryManager sharedManager] songs]] retain]; [self updateDisplay]; }
+    if (_screenType == TBClassicScreenSongs) { [_currentItems release]; _currentItems = [[self shuffleListWithTracks:[[TBLibraryManager sharedManager] songs]] retain]; if (_visible && [UIApplication sharedApplication].applicationState == UIApplicationStateActive) [self updateDisplay]; }
 }
 - (void)sharedDataChanged:(NSNotification *)notification {
     NSArray *items = nil;
@@ -504,17 +548,38 @@ typedef enum {
         items = [self shuffleListWithTracks:[_screenTitle isEqualToString:@"Recently Played"]
             ? [[TBRecentManager sharedManager] recentlyPlayedItems] : [[TBRecentManager sharedManager] recentlyAddedItems]];
     }
-    if (items) { [_currentItems release]; _currentItems = [items retain]; [self updateDisplay]; }
+    if (items) { [_currentItems release]; _currentItems = [items retain]; if (_visible && [UIApplication sharedApplication].applicationState == UIApplicationStateActive) [self updateDisplay]; }
 }
 
 - (void)clickWheel:(TBClickWheelView *)wheel didRotateBySteps:(NSInteger)steps {
-    if (_screenType == TBClassicScreenNowPlaying) return;
+    if (_screenType == TBClassicScreenNowPlaying) {
+        if (!steps) return;
+        TBPlayerManager *manager = [TBPlayerManager sharedManager];
+        MPMediaItem *item = manager.musicPlayer.nowPlayingItem;
+        NSTimeInterval duration = [[item valueForProperty:MPMediaItemPropertyPlaybackDuration] doubleValue];
+        if (!item || duration <= 0) return;
+        NSTimeInterval current = manager.musicPlayer.currentPlaybackTime;
+        NSTimeInterval target = current + (NSTimeInterval)steps * 3.0;
+        target = MAX(0.0, MIN(duration, target));
+        if (fabs(target - current) < 0.5) return;
+        if (!_classicSeekChanged) [manager beginInteractiveSeek];
+        [manager seekToTimeWithoutSaving:target];
+        _classicSeekChanged = YES;
+        [self updateProgress];
+        return;
+    }
     NSInteger count = (NSInteger)[_currentItems count]; if (!count) return;
     NSInteger next = _selectedIndex + steps; if (next < 0) next = 0; if (next >= count) next = count - 1;
     if (next != _selectedIndex) { _selectedIndex = next;
         if (_screenType == TBClassicScreenRoot) [[NSUserDefaults standardUserDefaults]
             setInteger:_selectedIndex forKey:TBClassicRootSelectionDefaultsKey];
         [self updateDisplay]; }
+}
+- (void)clickWheelDidEndRotation:(TBClickWheelView *)wheel {
+    if (_classicSeekChanged) {
+        [[TBPlayerManager sharedManager] endInteractiveSeek];
+        _classicSeekChanged = NO;
+    }
 }
 - (void)clickWheelDidSelect:(TBClickWheelView *)wheel { [self selectCurrentItem]; }
 - (void)clickWheelDidPressMenu:(TBClickWheelView *)wheel { [self popScreen]; }
@@ -530,7 +595,7 @@ typedef enum {
     [[NSNotificationCenter defaultCenter] removeObserver:self]; _wheelView.delegate = nil;
     [self stopProgressTimer];
     [_wheelView release]; [_navigationStack release]; [_currentItems release]; [_screenTitle release];
-    [_rowLabels release]; [_titleLabel release]; [_statusLabel release];
+    [_rowLabels release]; [_titleLabel release]; [_queuePositionLabel release]; [_statusLabel release];
     [_nowPlayingView release]; [_nowPlayingArtworkView release]; [_nowPlayingTitleLabel release];
     [_nowPlayingArtistLabel release]; [_nowPlayingAlbumLabel release];
     [_nowPlayingElapsedLabel release]; [_nowPlayingRemainingLabel release];

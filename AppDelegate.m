@@ -9,6 +9,7 @@
 #import "TBPlayerManager.h"
 #import "TBRecentManager.h"
 #import "TBClassicViewController.h"
+#import "TBPerformance.h"
 
 @implementation AppDelegate
 
@@ -56,7 +57,7 @@ static NSString *const TBClassicModeDefaultsKey = @"TBClassicModeEnabled";
     self.window.rootViewController = self.tabBarController;
 
     [self.window makeKeyAndVisible];
-    NSLog(@"Touchbox: app launch complete");
+    TBPerformanceLog(@"Touchbox: app launch complete");
     [TBRecentManager sharedManager];
     [[TBLibraryManager sharedManager] beginLoadingLibrary];
     if ([[NSUserDefaults standardUserDefaults] boolForKey:TBClassicModeDefaultsKey])
@@ -88,9 +89,9 @@ static NSString *const TBClassicModeDefaultsKey = @"TBClassicModeEnabled";
     self.window.rootViewController = _classicViewController;
     [[NSUserDefaults standardUserDefaults] setBool:YES forKey:TBClassicModeDefaultsKey];
     [[NSUserDefaults standardUserDefaults] synchronize];
-    NSLog(@"Touchbox Classic: prototype shown; playback queue unchanged");
+    TBPerformanceLog(@"Touchbox Classic: shown; playback queue unchanged");
 }
-- (void)showStandardMode { [[UIApplication sharedApplication] setStatusBarHidden:NO withAnimation:UIStatusBarAnimationNone]; self.window.rootViewController = self.tabBarController; [[NSUserDefaults standardUserDefaults] setBool:NO forKey:TBClassicModeDefaultsKey]; [[NSUserDefaults standardUserDefaults] synchronize]; [self applyTheme]; NSLog(@"Touchbox Classic: returned to Standard Mode"); }
+- (void)showStandardMode { [[UIApplication sharedApplication] setStatusBarHidden:NO withAnimation:UIStatusBarAnimationNone]; self.window.rootViewController = self.tabBarController; [[NSUserDefaults standardUserDefaults] setBool:NO forKey:TBClassicModeDefaultsKey]; [[NSUserDefaults standardUserDefaults] synchronize]; [self applyTheme]; TBPerformanceLog(@"Touchbox Classic: returned to Standard Mode"); }
 
 - (void)dealloc {
     [[NSNotificationCenter defaultCenter] removeObserver:self];

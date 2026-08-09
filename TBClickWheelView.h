@@ -4,6 +4,7 @@
 
 @protocol TBClickWheelViewDelegate <NSObject>
 - (void)clickWheel:(TBClickWheelView *)wheel didRotateBySteps:(NSInteger)steps;
+- (void)clickWheelDidEndRotation:(TBClickWheelView *)wheel;
 - (void)clickWheelDidSelect:(TBClickWheelView *)wheel;
 - (void)clickWheelDidPressMenu:(TBClickWheelView *)wheel;
 - (void)clickWheelDidPressPrevious:(TBClickWheelView *)wheel;

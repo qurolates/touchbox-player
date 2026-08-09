@@ -1,8 +1,8 @@
 Package: com.touchbox.player
 Name: Touchbox
-Version: 0.0.1
+Version: 0.1.0
 Architecture: iphoneos-arm
-Description: Touchbox music player proof of concept for iOS 4.1
+Description: Offline music player with Standard and Classic Click Wheel modes for legacy iOS
 Maintainer: qura
 Author: qura
 Section: Applications

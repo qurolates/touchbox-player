@@ -22,6 +22,7 @@ Touchbox_FILES = main.m AppDelegate.m \
 	TBAlbumsViewController.m TBArtistsViewController.m TBAlbumViewController.m \
 	TBFavoritesViewController.m TBPlaylistsViewController.m
 Touchbox_FRAMEWORKS = UIKit Foundation CoreGraphics MediaPlayer
-Touchbox_CFLAGS = -fno-objc-arc
+TB_DEBUG_PERFORMANCE ?= 0
+Touchbox_CFLAGS = -fno-objc-arc -DTB_DEBUG_PERFORMANCE=$(TB_DEBUG_PERFORMANCE)
 
 include $(THEOS_MAKE_PATH)/application.mk

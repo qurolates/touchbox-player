@@ -8,6 +8,7 @@
 #import "TBLibraryManager.h"
 #import "TBAlbumViewController.h"
 #import "TBArtistsViewController.h"
+#import "TBPerformance.h"
 
 @implementation TBTrackListViewController
 
@@ -95,6 +96,12 @@
     [self reloadTrackItems];
     [self.tableView reloadData];
     [self updatePlayPauseButton];
+    if (_pendingSearchText) [self performSearch:_pendingSearchText];
+}
+
+- (void)viewWillDisappear:(BOOL)animated {
+    [_searchTimer invalidate]; [_searchTimer release]; _searchTimer = nil;
+    [super viewWillDisappear:animated];
 }
 
 - (void)reloadTrackItems {}
@@ -183,7 +190,7 @@
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
     MPMediaItem *item = [_items objectAtIndex:(NSUInteger)indexPath.row];
     NSNumber *persistentID = [item valueForProperty:MPMediaItemPropertyPersistentID];
-    NSLog(@"Touchbox: selected persistentID=%llu title=%@ artist=%@",
+    TBPerformanceLog(@"Touchbox: selected persistentID=%llu title=%@ artist=%@",
           [persistentID unsignedLongLongValue],
           [item valueForProperty:MPMediaItemPropertyTitle],
           [item valueForProperty:MPMediaItemPropertyArtist]);
@@ -266,15 +273,19 @@
 }
 
 - (void)playbackChanged:(NSNotification *)notification {
-    NSLog(@"Touchbox: playback state=%ld",
+    if (![self isViewLoaded] || !self.view.window ||
+        [UIApplication sharedApplication].applicationState != UIApplicationStateActive) return;
+    TBPerformanceLog(@"Touchbox: playback state=%ld",
           (long)[TBPlayerManager sharedManager].musicPlayer.playbackState);
     [self updatePlayPauseButton];
 }
 
 - (void)nowPlayingChanged:(NSNotification *)notification {
+    if (![self isViewLoaded] || !self.view.window ||
+        [UIApplication sharedApplication].applicationState != UIApplicationStateActive) return;
     MPMediaItem *item = [TBPlayerManager sharedManager].musicPlayer.nowPlayingItem;
     NSNumber *persistentID = [item valueForProperty:MPMediaItemPropertyPersistentID];
-    NSLog(@"Touchbox: nowPlayingItem=%@ artist=%@ persistentID=%llu",
+    TBPerformanceLog(@"Touchbox: nowPlayingItem=%@ artist=%@ persistentID=%llu",
           [item valueForProperty:MPMediaItemPropertyTitle],
           [item valueForProperty:MPMediaItemPropertyArtist],
           [persistentID unsignedLongLongValue]);
@@ -282,6 +293,8 @@
 }
 
 - (void)favoritesChanged:(NSNotification *)notification {
+    if (![self isViewLoaded] || !self.view.window ||
+        [UIApplication sharedApplication].applicationState != UIApplicationStateActive) return;
     [self reloadTrackItems];
     [self.tableView reloadData];
 }
@@ -292,7 +305,7 @@
 }
 
 - (void)didReceiveMemoryWarning {
-    NSLog(@"Touchbox: memory warning in %@", NSStringFromClass([self class]));
+    TBPerformanceLog(@"Touchbox: memory warning in %@", NSStringFromClass([self class]));
     [super didReceiveMemoryWarning];
 }
 

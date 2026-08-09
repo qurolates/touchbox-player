@@ -5,6 +5,7 @@
 #import "TBIconFactory.h"
 #import "TBFavoritesManager.h"
 #import "TBAddToPlaylistViewController.h"
+#import "TBArtworkCache.h"
 
 @implementation TBNowPlayingViewController
 
@@ -129,11 +130,15 @@
         name:TBFavoritesDidChangeNotification object:nil];
     [center addObserver:self selector:@selector(themeChanged:)
         name:TBThemeDidChangeNotification object:nil];
+    [center addObserver:self selector:@selector(applicationDidEnterBackground:)
+        name:UIApplicationDidEnterBackgroundNotification object:nil];
+    [center addObserver:self selector:@selector(applicationDidBecomeActive:)
+        name:UIApplicationDidBecomeActiveNotification object:nil];
     [self updateAll];
     [self applyTheme];
 }
 
-- (void)themeChanged:(NSNotification *)notification { [self applyTheme]; }
+- (void)themeChanged:(NSNotification *)notification { if ([self isViewLoaded] && self.view.window && [UIApplication sharedApplication].applicationState == UIApplicationStateActive) [self applyTheme]; }
 - (void)applyTheme {
     self.view.backgroundColor = [TBTheme backgroundColor]; _artworkView.backgroundColor = [TBTheme placeholderColor];
     MPMediaItem *themeItem = [TBPlayerManager sharedManager].musicPlayer.nowPlayingItem;
@@ -168,6 +173,17 @@
     [_progressTimer release];
     _progressTimer = nil;
     [super viewWillDisappear:animated];
+}
+
+- (void)applicationDidEnterBackground:(NSNotification *)notification {
+    [_progressTimer invalidate]; [_progressTimer release]; _progressTimer = nil;
+}
+- (void)applicationDidBecomeActive:(NSNotification *)notification {
+    if ([self isViewLoaded] && self.view.window) {
+        [self updateAll];
+        if (!_progressTimer) _progressTimer = [[NSTimer scheduledTimerWithTimeInterval:1.0
+            target:self selector:@selector(progressTimerFired:) userInfo:nil repeats:YES] retain];
+    }
 }
 
 - (NSString *)timeString:(NSTimeInterval)time negative:(BOOL)negative {
@@ -210,24 +226,16 @@
     _artworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(220, 220)];
     if (!item) return;
     NSNumber *number = [item valueForProperty:MPMediaItemPropertyPersistentID];
-    _artworkKey = [[NSString stringWithFormat:@"%llu", [number unsignedLongLongValue]] copy];
-    NSDictionary *request = [NSDictionary dictionaryWithObjectsAndKeys:
-        item, @"item", _artworkKey, @"key", nil];
-    [self performSelectorInBackground:@selector(loadArtwork:) withObject:request];
-}
-
-- (void)loadArtwork:(NSDictionary *)request {
-    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-    MPMediaItemArtwork *artwork = [[request objectForKey:@"item"] valueForProperty:MPMediaItemPropertyArtwork];
-    UIImage *image = [artwork imageWithSize:CGSizeMake(220, 220)];
-    NSDictionary *result = [[NSDictionary alloc] initWithObjectsAndKeys:
-        [request objectForKey:@"key"], @"key", (image ? image : [NSNull null]), @"image", nil];
-    [self performSelectorOnMainThread:@selector(showArtwork:) withObject:result waitUntilDone:YES];
-    [result release];
-    [pool drain];
+    _artworkKey = [[NSString stringWithFormat:@"nowplaying-%llu", [number unsignedLongLongValue]] copy];
+    UIImage *cached = [[TBArtworkCache sharedCache] cachedImageForKey:_artworkKey];
+    if (cached) _artworkView.image = cached;
+    else [[TBArtworkCache sharedCache] requestImageForItem:item size:CGSizeMake(220, 220)
+        key:_artworkKey target:self selector:@selector(showArtwork:)];
 }
 
 - (void)showArtwork:(NSDictionary *)result {
+    if (![self isViewLoaded] || !self.view.window ||
+        [UIApplication sharedApplication].applicationState != UIApplicationStateActive) return;
     if (![_artworkKey isEqualToString:[result objectForKey:@"key"]]) return;
     id image = [result objectForKey:@"image"];
     if (image != [NSNull null]) _artworkView.image = image;
@@ -265,7 +273,14 @@
     _remainingLabel.text = [self timeString:MAX(duration - elapsed, 0) negative:YES];
 }
 
-- (void)progressTimerFired:(NSTimer *)timer { [self updateProgress]; }
+- (void)progressTimerFired:(NSTimer *)timer {
+    if (![self isViewLoaded] || !self.view.window ||
+        [UIApplication sharedApplication].applicationState != UIApplicationStateActive) {
+        [_progressTimer invalidate]; [_progressTimer release]; _progressTimer = nil;
+        return;
+    }
+    [self updateProgress];
+}
 - (void)seekStarted:(UISlider *)slider { _seeking = YES; }
 - (void)seekFinished:(UISlider *)slider {
     [[TBPlayerManager sharedManager] seekToTime:slider.value];
@@ -291,9 +306,9 @@
     [self.navigationController pushViewController:controller animated:YES];
     [controller release];
 }
-- (void)playerItemChanged:(NSNotification *)notification { [self updateAll]; }
-- (void)playerStateChanged:(NSNotification *)notification { [self updateButtons]; [self updateProgress]; }
-- (void)favoritesChanged:(NSNotification *)notification { [self updateFavoriteButton]; }
+- (void)playerItemChanged:(NSNotification *)notification { if ([self isViewLoaded] && self.view.window && [UIApplication sharedApplication].applicationState == UIApplicationStateActive) [self updateAll]; }
+- (void)playerStateChanged:(NSNotification *)notification { if ([self isViewLoaded] && self.view.window && [UIApplication sharedApplication].applicationState == UIApplicationStateActive) { [self updateButtons]; [self updateProgress]; } }
+- (void)favoritesChanged:(NSNotification *)notification { if ([self isViewLoaded] && self.view.window && [UIApplication sharedApplication].applicationState == UIApplicationStateActive) [self updateFavoriteButton]; }
 
 - (void)didReceiveMemoryWarning {
     _artworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(220, 220)];

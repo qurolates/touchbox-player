@@ -1,5 +1,7 @@
 #import "TBPlayerManager.h"
 #import "TBLibraryManager.h"
+#import "TBPerformance.h"
+#import <math.h>
 
 NSString *const TBPlayerQueueDidChangeNotification = @"TBPlayerQueueDidChangeNotification";
 
@@ -36,6 +38,9 @@ static NSString *const TBPlaybackStateDefaultsKey = @"TBPlaybackState";
         [[NSNotificationCenter defaultCenter] addObserver:self
             selector:@selector(nowPlayingItemChanged:)
             name:MPMusicPlayerControllerNowPlayingItemDidChangeNotification object:_musicPlayer];
+        [[NSNotificationCenter defaultCenter] addObserver:self
+            selector:@selector(playbackStateChanged:)
+            name:MPMusicPlayerControllerPlaybackStateDidChangeNotification object:_musicPlayer];
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(libraryReady:)
             name:TBLibraryIndexDidLoadNotification object:[TBLibraryManager sharedManager]];
     }
@@ -44,7 +49,7 @@ static NSString *const TBPlaybackStateDefaultsKey = @"TBPlaybackState";
 
 - (void)playItems:(NSArray *)items startingAtItem:(MPMediaItem *)item {
     if ([items count] == 0 || item == nil) {
-        NSLog(@"Touchbox: refusing empty playback queue");
+        TBPerformanceLog(@"Touchbox: refusing empty playback queue");
         return;
     }
     [_originalQueueItems release];
@@ -54,7 +59,7 @@ static NSString *const TBPlaybackStateDefaultsKey = @"TBPlaybackState";
     _shuffleEnabled = NO;
     _musicPlayer.shuffleMode = MPMusicShuffleModeOff;
     MPMediaItemCollection *queue = [MPMediaItemCollection collectionWithItems:_queueItems];
-    NSLog(@"Touchbox: creating queue with %lu items", (unsigned long)[items count]);
+    TBPerformanceLog(@"Touchbox: creating queue with %lu items", (unsigned long)[items count]);
     [_musicPlayer setQueueWithItemCollection:queue];
     _musicPlayer.nowPlayingItem = item;
     [_musicPlayer play];
@@ -85,7 +90,10 @@ static NSString *const TBPlaybackStateDefaultsKey = @"TBPlaybackState";
 - (void)previous { [_musicPlayer skipToPreviousItem]; }
 - (void)next { [_musicPlayer skipToNextItem]; }
 
-- (void)seekToTime:(NSTimeInterval)time { _musicPlayer.currentPlaybackTime = time; [self savePlaybackState]; }
+- (void)seekToTimeWithoutSaving:(NSTimeInterval)time { _musicPlayer.currentPlaybackTime = time; }
+- (void)seekToTime:(NSTimeInterval)time { [self seekToTimeWithoutSaving:time]; [self savePlaybackState]; }
+- (void)beginInteractiveSeek { _interactiveSeek = YES; }
+- (void)endInteractiveSeek { if (!_interactiveSeek) return; _interactiveSeek = NO; [self savePlaybackState]; }
 
 - (NSString *)persistentIDForItem:(MPMediaItem *)item {
     NSNumber *number = [item valueForProperty:MPMediaItemPropertyPersistentID];
@@ -108,6 +116,9 @@ static NSString *const TBPlaybackStateDefaultsKey = @"TBPlaybackState";
 }
 
 - (void)nowPlayingItemChanged:(NSNotification *)notification { [self updateCurrentQueueIndex]; [self savePlaybackState]; }
+- (void)playbackStateChanged:(NSNotification *)notification {
+    if (!_interactiveSeek && _musicPlayer.playbackState != MPMusicPlaybackStatePlaying) [self savePlaybackState];
+}
 
 - (void)insertItem:(MPMediaItem *)item atIndex:(NSUInteger)index {
     if (!item) return;
@@ -173,7 +184,6 @@ static NSString *const TBPlaybackStateDefaultsKey = @"TBPlaybackState";
     _repeatOneEnabled = !_repeatOneEnabled;
     _musicPlayer.repeatMode = _repeatOneEnabled ? MPMusicRepeatModeOne : MPMusicRepeatModeNone;
     [[NSUserDefaults standardUserDefaults] setBool:_repeatOneEnabled forKey:TBRepeatOneDefaultsKey];
-    [[NSUserDefaults standardUserDefaults] synchronize];
     [self savePlaybackState];
 }
 
@@ -188,10 +198,14 @@ static NSString *const TBPlaybackStateDefaultsKey = @"TBPlaybackState";
     for (i = 0; i < [_queueItems count]; i++) [ids addObject:[self persistentIDForItem:[_queueItems objectAtIndex:i]]];
     NSString *current = [self persistentIDForItem:_musicPlayer.nowPlayingItem];
     NSDictionary *state = [NSDictionary dictionaryWithObjectsAndKeys:ids, @"queue", (current ? current : @""), @"current",
-        [NSNumber numberWithDouble:_musicPlayer.currentPlaybackTime], @"time", [NSNumber numberWithBool:_shuffleEnabled], @"shuffle",
+        [NSNumber numberWithUnsignedInteger:(NSUInteger)MAX(0.0, floor(_musicPlayer.currentPlaybackTime))], @"time",
+        [NSNumber numberWithBool:_shuffleEnabled], @"shuffle",
         [NSNumber numberWithBool:_repeatOneEnabled], @"repeat", [NSNumber numberWithInteger:_currentQueueIndex], @"queueIndex",
         [NSNumber numberWithBool:(_musicPlayer.playbackState == MPMusicPlaybackStatePlaying)], @"wasPlaying",
         @"TouchboxQueue", @"queueContext", nil];
+    if ([_lastSavedState isEqualToDictionary:state]) return;
+    [_lastSavedState release];
+    _lastSavedState = [state copy];
     [[NSUserDefaults standardUserDefaults] setObject:state forKey:TBPlaybackStateDefaultsKey];
 }
 
@@ -217,6 +231,7 @@ static NSString *const TBPlaybackStateDefaultsKey = @"TBPlaybackState";
     [_musicPlayer endGeneratingPlaybackNotifications];
     [_originalQueueItems release];
     [_queueItems release];
+    [_lastSavedState release];
     [_musicPlayer release];
     [super dealloc];
 }

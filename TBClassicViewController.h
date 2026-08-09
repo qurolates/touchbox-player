@@ -8,6 +8,7 @@
     NSString *_screenTitle;
     NSMutableArray *_rowLabels;
     UILabel *_titleLabel;
+    UILabel *_queuePositionLabel;
     UILabel *_statusLabel;
     TBClickWheelView *_wheelView;
     NSInteger _selectedIndex;
@@ -23,5 +24,7 @@
     NSString *_nowPlayingArtworkKey;
     BOOL _creatingPlaylistForCurrentItem;
     BOOL _loadingClassicPlaylist;
+    BOOL _visible;
+    BOOL _classicSeekChanged;
 }
 @end

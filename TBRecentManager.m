@@ -23,7 +23,12 @@ static NSString *const TBRecentFirstSeenKey = @"TBRecentFirstSeenDates";
 - (void)save { NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults]; [defaults setObject:_playedDates forKey:TBRecentPlayedKey]; [defaults setObject:_firstSeenDates forKey:TBRecentFirstSeenKey]; }
 - (void)playbackChanged:(NSNotification *)notification { TBPlayerManager *manager = [TBPlayerManager sharedManager]; if (manager.musicPlayer.playbackState != MPMusicPlaybackStatePlaying) return;
     NSString *identifier = [self identifier:manager.musicPlayer.nowPlayingItem]; if (!identifier) return;
-    [_playedDates setObject:[NSDate date] forKey:identifier];
+    NSDate *now = [NSDate date];
+    if ([_lastPlayedIdentifier isEqualToString:identifier] && _lastPlayedWriteDate &&
+        [now timeIntervalSinceDate:_lastPlayedWriteDate] < 5.0) return;
+    [_lastPlayedIdentifier release]; _lastPlayedIdentifier = [identifier copy];
+    [_lastPlayedWriteDate release]; _lastPlayedWriteDate = [now retain];
+    [_playedDates setObject:now forKey:identifier];
     if ([_playedDates count] > 200) { NSArray *keys = [_playedDates keysSortedByValueUsingSelector:@selector(compare:)]; NSUInteger remove = [_playedDates count] - 200; NSUInteger i; for (i = 0; i < remove; i++) [_playedDates removeObjectForKey:[keys objectAtIndex:i]]; }
     [self save]; [[NSNotificationCenter defaultCenter] postNotificationName:TBRecentDidChangeNotification object:self];
 }
@@ -31,5 +36,5 @@ static NSString *const TBRecentFirstSeenKey = @"TBRecentFirstSeenDates";
 - (NSArray *)itemsForDates:(NSDictionary *)dates { NSArray *ascending = [dates keysSortedByValueUsingSelector:@selector(compare:)]; NSMutableArray *ids = [NSMutableArray arrayWithCapacity:[ascending count]]; NSEnumerator *enumerator = [ascending reverseObjectEnumerator]; NSString *identifier; while ((identifier = [enumerator nextObject])) [ids addObject:identifier]; return [[TBLibraryManager sharedManager] itemsForPersistentIDs:ids]; }
 - (NSArray *)recentlyPlayedItems { return [self itemsForDates:_playedDates]; }
 - (NSArray *)recentlyAddedItems { NSArray *items = [self itemsForDates:_firstSeenDates]; return [items count] > 200 ? [items subarrayWithRange:NSMakeRange(0, 200)] : items; }
-- (void)dealloc { [[NSNotificationCenter defaultCenter] removeObserver:self]; [_playedDates release]; [_firstSeenDates release]; [super dealloc]; }
+- (void)dealloc { [[NSNotificationCenter defaultCenter] removeObserver:self]; [_playedDates release]; [_firstSeenDates release]; [_lastPlayedIdentifier release]; [_lastPlayedWriteDate release]; [super dealloc]; }
 @end
