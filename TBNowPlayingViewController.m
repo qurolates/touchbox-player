@@ -50,24 +50,37 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.view.backgroundColor = [TBTheme backgroundColor];
+    UIButton *backButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    backButton.frame = CGRectMake(0, 0, 58, 30);
+    backButton.titleLabel.font = [TBTheme secondaryFont];
+    [backButton setTitle:@"Back" forState:UIControlStateNormal];
+    [backButton setTitleColor:[TBTheme accentColor] forState:UIControlStateNormal];
+    [backButton addTarget:self action:@selector(backPressed:) forControlEvents:UIControlEventTouchUpInside];
+    self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc]
+        initWithCustomView:backButton] autorelease];
+    UIButton *queueButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    queueButton.frame = CGRectMake(0, 0, 58, 30);
+    queueButton.titleLabel.font = [TBTheme secondaryFont];
+    [queueButton setTitle:@"Queue" forState:UIControlStateNormal];
+    [queueButton setTitleColor:[TBTheme accentColor] forState:UIControlStateNormal];
+    [queueButton addTarget:self action:@selector(queuePressed:) forControlEvents:UIControlEventTouchUpInside];
     self.navigationItem.rightBarButtonItem = [[[UIBarButtonItem alloc]
-        initWithTitle:@"Queue" style:UIBarButtonItemStyleBordered
-        target:self action:@selector(queuePressed:)] autorelease];
+        initWithCustomView:queueButton] autorelease];
     _artworkView = [[UIImageView alloc] initWithFrame:CGRectMake(50, 4, 220, 220)];
     _artworkView.backgroundColor = [TBTheme placeholderColor];
     _artworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(220, 220)];
     _artworkView.contentMode = UIViewContentModeScaleAspectFit;
     [self.view addSubview:_artworkView];
-    _titleLabel = [[self labelWithFrame:CGRectMake(15, 228, 258, 22)
+    _titleLabel = [[self labelWithFrame:CGRectMake(50, 228, 220, 22)
         font:[TBTheme sectionTitleFont] color:[TBTheme primaryTextColor]] retain];
     _favoriteButton = [[UIButton buttonWithType:UIButtonTypeCustom] retain];
     _favoriteButton.frame = CGRectMake(274, 221, 42, 36);
     [_favoriteButton addTarget:self action:@selector(favoritePressed:)
               forControlEvents:UIControlEventTouchUpInside];
     [self.view addSubview:_favoriteButton];
-    _artistLabel = [[self labelWithFrame:CGRectMake(15, 250, 290, 18)
+    _artistLabel = [[self labelWithFrame:CGRectMake(50, 250, 220, 18)
         font:[TBTheme secondaryFont] color:[TBTheme secondaryTextColor]] retain];
-    _albumLabel = [[self labelWithFrame:CGRectMake(15, 268, 250, 17)
+    _albumLabel = [[self labelWithFrame:CGRectMake(50, 268, 220, 17)
         font:[TBTheme metadataFont] color:[TBTheme secondaryTextColor]] retain];
     UIButton *addToPlaylist = [UIButton buttonWithType:UIButtonTypeCustom];
     addToPlaylist.tag = 203;
@@ -136,6 +149,10 @@
     [(UIButton *)[self.view viewWithTag:201] setImage:[TBIconFactory iconNamed:@"previous" active:NO] forState:UIControlStateNormal];
     [(UIButton *)[self.view viewWithTag:202] setImage:[TBIconFactory iconNamed:@"next" active:NO] forState:UIControlStateNormal];
     [(UIButton *)[self.view viewWithTag:203] setTitleColor:[TBTheme accentColor] forState:UIControlStateNormal];
+    [(UIButton *)self.navigationItem.leftBarButtonItem.customView
+        setTitleColor:[TBTheme accentColor] forState:UIControlStateNormal];
+    [(UIButton *)self.navigationItem.rightBarButtonItem.customView
+        setTitleColor:[TBTheme accentColor] forState:UIControlStateNormal];
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -265,6 +282,7 @@
     [self.navigationController pushViewController:controller animated:YES];
     [controller release];
 }
+- (void)backPressed:(id)sender { [self.navigationController popViewControllerAnimated:YES]; }
 - (void)addToPlaylistPressed:(id)sender {
     MPMediaItem *item = [TBPlayerManager sharedManager].musicPlayer.nowPlayingItem;
     if (!item) return;

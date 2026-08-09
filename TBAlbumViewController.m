@@ -130,9 +130,16 @@
     metadata.textColor = [TBTheme secondaryTextColor];
     metadata.textAlignment = UITextAlignmentCenter;
     NSString *year = nil;
+    NSTimeInterval totalDuration = 0;
     if ([self.items count]) {
-        NSDate *releaseDate = [[self.items objectAtIndex:0]
-            valueForProperty:MPMediaItemPropertyReleaseDate];
+        NSDate *releaseDate = nil;
+        NSUInteger itemIndex;
+        for (itemIndex = 0; itemIndex < [self.items count]; itemIndex++) {
+            MPMediaItem *albumItem = [self.items objectAtIndex:itemIndex];
+            totalDuration += [[albumItem valueForProperty:MPMediaItemPropertyPlaybackDuration] doubleValue];
+            if (!releaseDate)
+                releaseDate = [albumItem valueForProperty:MPMediaItemPropertyReleaseDate];
+        }
         if (releaseDate) {
             NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
             [formatter setDateFormat:@"yyyy"];
@@ -140,9 +147,12 @@
             [formatter release];
         }
     }
+    NSString *albumDuration = [self durationString:totalDuration];
     metadata.text = [year length]
-        ? [NSString stringWithFormat:@"%@ • %lu tracks", year, (unsigned long)[self.items count]]
-        : [NSString stringWithFormat:@"%lu tracks", (unsigned long)[self.items count]];
+        ? [NSString stringWithFormat:@"%@ • %lu tracks • %@", year,
+            (unsigned long)[self.items count], albumDuration]
+        : [NSString stringWithFormat:@"%lu tracks • %@",
+            (unsigned long)[self.items count], albumDuration];
     [header addSubview:metadata];
     UIButton *play = [UIButton buttonWithType:UIButtonTypeCustom];
     play.frame = CGRectMake(129, 209, 62, 32);

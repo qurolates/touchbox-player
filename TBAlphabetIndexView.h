@@ -7,4 +7,5 @@
     NSInteger _selectedIndex;
 }
 - (id)initWithFrame:(CGRect)frame titles:(NSArray *)titles target:(id)target action:(SEL)action;
+- (void)setTitles:(NSArray *)titles;
 @end

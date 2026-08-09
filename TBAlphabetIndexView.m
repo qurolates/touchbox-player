@@ -17,6 +17,13 @@
     return self;
 }
 - (void)themeChanged:(NSNotification *)notification { self.backgroundColor = [TBTheme backgroundColor]; [self setNeedsDisplay]; }
+- (void)setTitles:(NSArray *)titles {
+    if (_titles == titles || [_titles isEqualToArray:titles]) return;
+    [_titles release];
+    _titles = [titles copy];
+    _selectedIndex = -1;
+    [self setNeedsDisplay];
+}
 - (void)drawRect:(CGRect)rect {
     CGFloat itemHeight = self.bounds.size.height / MAX((CGFloat)[_titles count], 1.0f);
     UIFont *font = [UIFont boldSystemFontOfSize:8.0f];

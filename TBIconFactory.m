@@ -82,6 +82,11 @@
             CGContextFillEllipseInRect(context, CGRectMake(4, y - 1, 3, 3));
             CGContextFillRect(context, CGRectMake(10, y, 14, 2));
         }
+    } else if ([name isEqualToString:@"disclosure"]) {
+        CGContextMoveToPoint(context, 10, 7);
+        CGContextAddLineToPoint(context, 17, 14);
+        CGContextAddLineToPoint(context, 10, 21);
+        CGContextStrokePath(context);
     }
     UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
     UIGraphicsEndImageContext();

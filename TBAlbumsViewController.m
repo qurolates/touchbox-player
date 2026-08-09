@@ -35,7 +35,8 @@
     [self.view addSubview:self.tableView];
     _alphabetIndexView = [[TBAlphabetIndexView alloc]
         initWithFrame:CGRectMake(300, 0, 20, self.view.bounds.size.height)
-        titles:[TBAlphabeticIndex titles] target:self action:@selector(alphabetIndexSelected:)];
+        titles:[TBAlphabeticIndex titlesForArtistGroups:[[TBLibraryManager sharedManager] artistGroups]]
+        target:self action:@selector(alphabetIndexSelected:)];
     [self.view addSubview:_alphabetIndexView];
 }
 
@@ -54,6 +55,7 @@
     _allArtistGroups = [[[TBLibraryManager sharedManager] artistGroups] retain];
     _artistGroups = [_allArtistGroups retain];
     _sectionIndexMap = [[TBAlphabeticIndex sectionMapForArtistGroups:_artistGroups] retain];
+    [_alphabetIndexView setTitles:[TBAlphabeticIndex titlesForArtistGroups:_artistGroups]];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(indexReady:)
         name:TBLibraryIndexDidLoadNotification object:[TBLibraryManager sharedManager]];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(themeChanged:)
@@ -80,6 +82,7 @@
     [_artistGroups release]; _artistGroups = [_allArtistGroups retain];
     [_sectionIndexMap release];
     _sectionIndexMap = [[TBAlphabeticIndex sectionMapForArtistGroups:_artistGroups] retain];
+    [_alphabetIndexView setTitles:[TBAlphabeticIndex titlesForArtistGroups:_artistGroups]];
     self.tableView.backgroundView = nil;
     [self.tableView reloadData];
 }

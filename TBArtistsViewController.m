@@ -7,6 +7,7 @@
 #import "TBAlphabeticIndex.h"
 #import "TBPlayerManager.h"
 #import "TBAlphabetIndexView.h"
+#import "TBIconFactory.h"
 
 @implementation TBArtistsViewController
 
@@ -37,7 +38,8 @@
     self.tableView = table; [table release]; [self.view addSubview:self.tableView];
     if (!_selectedArtist) {
         _alphabetIndexView = [[TBAlphabetIndexView alloc] initWithFrame:CGRectMake(300, 0, 20, self.view.bounds.size.height)
-            titles:[TBAlphabeticIndex titles] target:self action:@selector(alphabetIndexSelected:)];
+            titles:[TBAlphabeticIndex titlesForArtistGroups:[[TBLibraryManager sharedManager] artistGroups]]
+            target:self action:@selector(alphabetIndexSelected:)];
         [self.view addSubview:_alphabetIndexView];
     }
 }
@@ -57,6 +59,7 @@
         _artistGroups = [_allArtistGroups retain];
         _searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(0, 0, 300, 44)]; _searchBar.delegate = self; _searchBar.placeholder = @"Search Artists"; self.tableView.tableHeaderView = _searchBar;
         _sectionIndexMap = [[TBAlphabeticIndex sectionMapForArtistGroups:_artistGroups] retain];
+        [_alphabetIndexView setTitles:[TBAlphabeticIndex titlesForArtistGroups:_artistGroups]];
         if (![[TBLibraryManager sharedManager] indexLoaded]) {
             self.tableView.backgroundView = TBCreateLoadingView(@"Preparing Artists…");
             [[TBLibraryManager sharedManager] beginLoadingLibrary];
@@ -90,7 +93,8 @@
     if (![query length]) _artistGroups = [_allArtistGroups retain];
     else { NSMutableArray *results = [NSMutableArray array]; NSUInteger i; for (i = 0; i < [_allArtistGroups count]; i++) { NSDictionary *group = [_allArtistGroups objectAtIndex:i];
         if ([[group objectForKey:TBArtistNameKey] rangeOfString:query options:(NSCaseInsensitiveSearch|NSDiacriticInsensitiveSearch)].location != NSNotFound) [results addObject:group]; } _artistGroups = [results copy]; }
-    [_sectionIndexMap release]; _sectionIndexMap = [[TBAlphabeticIndex sectionMapForArtistGroups:_artistGroups] retain]; [self.tableView reloadData];
+    [_sectionIndexMap release]; _sectionIndexMap = [[TBAlphabeticIndex sectionMapForArtistGroups:_artistGroups] retain];
+    [_alphabetIndexView setTitles:[TBAlphabeticIndex titlesForArtistGroups:_artistGroups]]; [self.tableView reloadData];
     _alphabetIndexView.hidden = [query length] > 0;
 }
 - (void)searchBarSearchButtonClicked:(UISearchBar *)bar { [bar resignFirstResponder]; }
@@ -119,6 +123,7 @@
         [_artistGroups release]; _artistGroups = [_allArtistGroups retain];
         [_sectionIndexMap release];
         _sectionIndexMap = [[TBAlphabeticIndex sectionMapForArtistGroups:_artistGroups] retain];
+        [_alphabetIndexView setTitles:[TBAlphabeticIndex titlesForArtistGroups:_artistGroups]];
     }
     self.tableView.backgroundView = nil;
     [self.tableView reloadData];
@@ -172,7 +177,14 @@
         cell.detailTextLabel.text = [NSString stringWithFormat:@"%lu albums",
             (unsigned long)[[artist objectForKey:TBAlbumsKey] count]];
     }
-    cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+    cell.accessoryType = UITableViewCellAccessoryNone;
+    UIImageView *disclosure = (UIImageView *)cell.accessoryView;
+    if (![disclosure isKindOfClass:[UIImageView class]]) {
+        disclosure = [[[UIImageView alloc] initWithFrame:CGRectMake(0, 0, 20, 28)] autorelease];
+        disclosure.contentMode = UIViewContentModeCenter;
+        cell.accessoryView = disclosure;
+    }
+    disclosure.image = [TBIconFactory iconNamed:@"disclosure" active:NO];
     return cell;
 }
 
