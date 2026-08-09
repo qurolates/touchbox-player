@@ -1,5 +1,6 @@
 #import <UIKit/UIKit.h>
 #import "TBClickWheelView.h"
+@class TBCoverFlowView;
 
 @interface TBClassicViewController : UIViewController <TBClickWheelViewDelegate> {
     NSMutableArray *_navigationStack;
@@ -13,6 +14,7 @@
     TBClickWheelView *_wheelView;
     NSInteger _selectedIndex;
     UIView *_nowPlayingView;
+    TBCoverFlowView *_coverFlowView;
     UIImageView *_nowPlayingArtworkView;
     UILabel *_nowPlayingTitleLabel;
     UILabel *_nowPlayingArtistLabel;

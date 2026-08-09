@@ -11,6 +11,7 @@
 #import "TBThemeViewController.h"
 #import "AppDelegate.h"
 #import "TBPerformance.h"
+#import "TBCoverFlowView.h"
 #import <math.h>
 
 static const NSInteger TBClassicVisibleRows = 6;
@@ -63,7 +64,8 @@ typedef enum {
     TBClassicScreenRecentTracks,
     TBClassicScreenQueue,
     TBClassicScreenTrackOptions,
-    TBClassicScreenAddToPlaylist
+    TBClassicScreenAddToPlaylist,
+    TBClassicScreenCoverFlow
 } TBClassicScreenType;
 
 @implementation TBClassicViewController
@@ -88,6 +90,7 @@ typedef enum {
     _statusLabel.frame = CGRectMake(0, displayHeight - 15, bodyWidth, 15);
     CGFloat nowHeight = displayHeight - 45.0f;
     _nowPlayingView.frame = CGRectMake(0, 30, bodyWidth, nowHeight);
+    _coverFlowView.frame = CGRectMake(0, 30, bodyWidth, nowHeight);
     CGFloat artworkSize = MIN(150.0f, 120.0f + MAX(0.0f, displayHeight - 220.0f) * 0.375f);
     _nowPlayingArtworkView.frame = CGRectMake(8, 6, artworkSize, artworkSize);
     CGFloat metadataX = artworkSize + 18.0f;
@@ -196,6 +199,8 @@ typedef enum {
     NSUInteger timeIndex; for (timeIndex = 0; timeIndex < [timeLabels count]; timeIndex++) { UILabel *label = [timeLabels objectAtIndex:timeIndex]; label.font = [UIFont systemFontOfSize:10]; label.textColor = [TBTheme secondaryTextColor]; label.backgroundColor = [UIColor clearColor]; }
     _nowPlayingRemainingLabel.textAlignment = UITextAlignmentRight;
     [_nowPlayingView addSubview:_nowPlayingElapsedLabel]; [_nowPlayingView addSubview:_nowPlayingRemainingLabel];
+    _coverFlowView = [[TBCoverFlowView alloc] initWithFrame:CGRectMake(0, 30, 320, 175)];
+    _coverFlowView.hidden = YES; [display addSubview:_coverFlowView];
     UIView *divider = [[[UIView alloc] initWithFrame:CGRectMake(0, 219, 320, 1)] autorelease];
     divider.backgroundColor = [TBTheme borderColor]; divider.tag = 841; [self.view addSubview:divider];
     _wheelView = [[TBClickWheelView alloc] initWithFrame:CGRectMake(0, 220, 320, 260)];
@@ -218,6 +223,7 @@ typedef enum {
     _nowPlayingArtistLabel.textColor = [TBTheme secondaryTextColor]; _nowPlayingAlbumLabel.textColor = [TBTheme secondaryTextColor];
     _nowPlayingElapsedLabel.textColor = [TBTheme secondaryTextColor]; _nowPlayingRemainingLabel.textColor = [TBTheme secondaryTextColor];
     _progressFillView.backgroundColor = [TBTheme accentColor]; _progressFillView.superview.backgroundColor = [TBTheme borderColor];
+    [_coverFlowView applyTheme];
     [[self.view viewWithTag:841] setBackgroundColor:[TBTheme borderColor]];
     _wheelView.backgroundColor = [TBTheme classicBodyColor]; [_wheelView setNeedsDisplay];
     [self updateDisplay];
@@ -357,14 +363,22 @@ typedef enum {
 - (void)updateDisplay {
     _titleLabel.text = [NSString stringWithFormat:@"  %@", _screenTitle];
     BOOL nowPlaying = _screenType == TBClassicScreenNowPlaying;
+    BOOL coverFlow = _screenType == TBClassicScreenCoverFlow;
     _nowPlayingView.hidden = !nowPlaying; _statusLabel.hidden = nowPlaying;
+    _coverFlowView.hidden = !coverFlow;
     _queuePositionLabel.hidden = !nowPlaying;
     NSInteger hiddenRow; for (hiddenRow = 0; hiddenRow < TBClassicVisibleRows; hiddenRow++)
-        ((UILabel *)[_rowLabels objectAtIndex:(NSUInteger)hiddenRow]).hidden = nowPlaying;
+        ((UILabel *)[_rowLabels objectAtIndex:(NSUInteger)hiddenRow]).hidden = nowPlaying || coverFlow;
     if (nowPlaying) { [self updateNowPlaying]; if (_visible) [self startProgressTimer]; return; }
     [self stopProgressTimer];
     NSInteger count = (NSInteger)[_currentItems count];
     if (count == 0) _selectedIndex = 0; else if (_selectedIndex >= count) _selectedIndex = count - 1;
+    if (coverFlow) {
+        _statusLabel.hidden = YES;
+        [_coverFlowView setAlbums:_currentItems selectedIndex:(count ? _selectedIndex : NSNotFound)];
+        return;
+    }
+    _statusLabel.hidden = NO;
     NSInteger maximumStart = MAX(0, count - TBClassicVisibleRows);
     NSInteger start = _selectedIndex - 2; if (start < 0) start = 0; if (start > maximumStart) start = maximumStart;
     NSInteger row;
@@ -406,7 +420,7 @@ typedef enum {
     [_currentItems release]; _currentItems = [[state objectForKey:TBClassicStateItemsKey] retain];
     _selectedIndex = [[state objectForKey:TBClassicStateSelectionKey] integerValue];
     if (_screenType == TBClassicScreenArtists) { [_currentItems release]; _currentItems = [[[TBLibraryManager sharedManager] artistGroups] retain]; }
-    else if (_screenType == TBClassicScreenAlbums) { [_currentItems release]; _currentItems = [[self allAlbums] retain]; }
+    else if (_screenType == TBClassicScreenAlbums || _screenType == TBClassicScreenCoverFlow) { [_currentItems release]; _currentItems = [[self allAlbums] retain]; }
     [state release]; TBPerformanceLog(@"Touchbox Classic: Menu back to %@", _screenTitle); [self updateDisplay];
 }
 
@@ -422,7 +436,7 @@ typedef enum {
     if (_screenType == TBClassicScreenRoot) {
         [[NSUserDefaults standardUserDefaults] setInteger:_selectedIndex forKey:TBClassicRootSelectionDefaultsKey];
         if (_selectedIndex == 0) [self pushScreen:TBClassicScreenMusic title:@"Music"
-            items:[NSArray arrayWithObjects:@"Artists", @"Albums", @"Songs", @"Playlists", @"Favorites", nil]];
+            items:[NSArray arrayWithObjects:@"Artists", @"Albums", @"Cover Flow", @"Songs", @"Playlists", @"Favorites", nil]];
         else if (_selectedIndex == 1) [self pushScreen:TBClassicScreenFavorites title:@"Favorites"
             items:[self shuffleListWithTracks:[self favoriteItems]]];
         else if (_selectedIndex == 2) [self pushScreen:TBClassicScreenRecent title:@"Recent"
@@ -440,13 +454,14 @@ typedef enum {
         if (_selectedIndex == 0) [self pushScreen:TBClassicScreenArtists title:@"Artists"
             items:[[TBLibraryManager sharedManager] artistGroups]];
         else if (_selectedIndex == 1) [self pushScreen:TBClassicScreenAlbums title:@"Albums" items:[self allAlbums]];
-        else if (_selectedIndex == 2) [self pushScreen:TBClassicScreenSongs title:@"Songs" items:[self shuffleListWithTracks:[[TBLibraryManager sharedManager] songs]]];
-        else if (_selectedIndex == 3) [self pushScreen:TBClassicScreenPlaylists title:@"Playlists" items:[NSArray arrayWithObjects:@"Touchbox Playlists", @"System Playlists", nil]];
+        else if (_selectedIndex == 2) [self pushScreen:TBClassicScreenCoverFlow title:@"Cover Flow" items:[self allAlbums]];
+        else if (_selectedIndex == 3) [self pushScreen:TBClassicScreenSongs title:@"Songs" items:[self shuffleListWithTracks:[[TBLibraryManager sharedManager] songs]]];
+        else if (_selectedIndex == 4) [self pushScreen:TBClassicScreenPlaylists title:@"Playlists" items:[NSArray arrayWithObjects:@"Touchbox Playlists", @"System Playlists", nil]];
         else [self pushScreen:TBClassicScreenFavorites title:@"Favorites" items:[self shuffleListWithTracks:[self favoriteItems]]];
     } else if (_screenType == TBClassicScreenArtists) {
         [self pushScreen:TBClassicScreenArtistAlbums title:[item objectForKey:TBArtistNameKey]
             items:[self artistAlbumMenuItems:[item objectForKey:TBAlbumsKey]]];
-    } else if (_screenType == TBClassicScreenArtistAlbums || _screenType == TBClassicScreenAlbums) {
+    } else if (_screenType == TBClassicScreenArtistAlbums || _screenType == TBClassicScreenAlbums || _screenType == TBClassicScreenCoverFlow) {
         if (![[TBLibraryManager sharedManager] mediaItemsReady]) { _statusLabel.text = @"Tracks are still loading…"; return; }
         if (_screenType == TBClassicScreenArtistAlbums && _selectedIndex == 0) {
             NSMutableArray *tracks = [NSMutableArray array]; NSUInteger albumIndex;
@@ -563,7 +578,7 @@ typedef enum {
 
 - (void)libraryIndexReady:(NSNotification *)notification {
     if (_screenType == TBClassicScreenArtists) { [_currentItems release]; _currentItems = [[[TBLibraryManager sharedManager] artistGroups] retain]; }
-    else if (_screenType == TBClassicScreenAlbums) { [_currentItems release]; _currentItems = [[self allAlbums] retain]; }
+    else if (_screenType == TBClassicScreenAlbums || _screenType == TBClassicScreenCoverFlow) { [_currentItems release]; _currentItems = [[self allAlbums] retain]; }
     else if (_screenType == TBClassicScreenArtistAlbums) {
         NSArray *groups = [[TBLibraryManager sharedManager] artistGroups]; NSUInteger index;
         for (index = 0; index < [groups count]; index++) {
@@ -613,7 +628,8 @@ typedef enum {
     if (next != _selectedIndex) { _selectedIndex = next;
         if (_screenType == TBClassicScreenRoot) [[NSUserDefaults standardUserDefaults]
             setInteger:_selectedIndex forKey:TBClassicRootSelectionDefaultsKey];
-        [self updateDisplay]; }
+        if (_screenType == TBClassicScreenCoverFlow) [_coverFlowView selectIndex:_selectedIndex animated:YES];
+        else [self updateDisplay]; }
 }
 - (void)clickWheelDidEndRotation:(TBClickWheelView *)wheel {
     if (_classicSeekChanged) {
@@ -634,7 +650,7 @@ typedef enum {
 - (void)dealloc {
     [[NSNotificationCenter defaultCenter] removeObserver:self]; _wheelView.delegate = nil;
     [self stopProgressTimer];
-    [_wheelView release]; [_navigationStack release]; [_currentItems release]; [_screenTitle release];
+    [_wheelView release]; [_coverFlowView release]; [_navigationStack release]; [_currentItems release]; [_screenTitle release];
     [_rowLabels release]; [_titleLabel release]; [_queuePositionLabel release]; [_statusLabel release];
     [_nowPlayingView release]; [_nowPlayingArtworkView release]; [_nowPlayingTitleLabel release];
     [_nowPlayingArtistLabel release]; [_nowPlayingAlbumLabel release];

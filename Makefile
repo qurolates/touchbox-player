@@ -9,7 +9,7 @@ Touchbox_FILES = main.m AppDelegate.m \
 	TBLibraryManager.m TBPlayerManager.m TBFavoritesManager.m \
 	TBUserPlaylistManager.m \
 	TBRecentManager.m TBRecentViewController.m \
-	TBClickWheelView.m TBClassicViewController.m \
+	TBClickWheelView.m TBCoverFlowView.m TBClassicViewController.m \
 	TBLoadingView.m \
 	TBTheme.m TBThemeViewController.m TBIconFactory.m \
 	TBAlphabeticIndex.m \
@@ -21,7 +21,7 @@ Touchbox_FILES = main.m AppDelegate.m \
 	TBTrackListViewController.m TBSongsViewController.m \
 	TBAlbumsViewController.m TBArtistsViewController.m TBAlbumViewController.m \
 	TBFavoritesViewController.m TBPlaylistsViewController.m
-Touchbox_FRAMEWORKS = UIKit Foundation CoreGraphics MediaPlayer
+Touchbox_FRAMEWORKS = UIKit Foundation CoreGraphics MediaPlayer QuartzCore
 TB_DEBUG_PERFORMANCE ?= 0
 Touchbox_CFLAGS = -fno-objc-arc -DTB_DEBUG_PERFORMANCE=$(TB_DEBUG_PERFORMANCE)
 
