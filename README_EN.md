@@ -2,6 +2,8 @@
 
 [Русская версия](README.md)
 
+**Touchbox 1.0.0** is the first official stable release.
+
 Touchbox is a full-featured offline music player for the local iPod touch library. It combines the capabilities of a modern local player with a separate Classic Mode inspired by the iPod Classic and controlled through a virtual Click Wheel.
 
 The application is designed primarily for the iPod touch 3G running iOS 4.1. It may also run on iOS 5 and iOS 6, but iPod3,1 / iOS 4.1 remains the main target and device-test configuration.
@@ -17,6 +19,7 @@ The application is designed primarily for the iPod touch 3G running iOS 4.1. It 
 - A mini-player in Standard Mode.
 - Search, Favorites, custom playlists, Recent lists, and a controllable queue.
 - Two independent interfaces: Standard Mode and Classic Mode.
+- Click Wheel-controlled Cover Flow in Classic Mode.
 - Global Light and Dark themes.
 
 ## Now Playing
@@ -180,11 +183,41 @@ The Click Wheel supports clockwise and counter-clockwise rotation, Center/Select
 - Now Playing;
 - Settings.
 
+On Classic Now Playing, rotating the Click Wheel seeks through the track. Seeking speed follows wheel speed: slow movement provides precise adjustments, while fast movement crosses long sections quickly. Progress and time labels update directly during the gesture.
+
 Classic Albums is adapted specifically for wheel navigation: it is a flat A–Z list sorted by album title instead of Standard Mode's artist grouping.
 
 Classic Now Playing displays artwork, title, artist, album, progress, time, and queue position. Pressing Center provides Favorite, Add to Playlist, Play Next, Queue, Shuffle, and Repeat actions.
 
 Standard and Classic share one media library, one queue, and one playback engine. You can switch between them during playback without resetting the music, position, or queue.
+
+## Cover Flow
+
+Classic Mode includes a dedicated Cover Flow album browser:
+
+- a horizontal artwork strip;
+- a large, front-facing selected album;
+- perspective rotation for neighboring covers;
+- smooth, symmetrical forward and backward transitions;
+- navigation through the Click Wheel;
+- Center opens the selected album and MENU goes back;
+- album and artist metadata below the strip.
+
+Cover Flow is designed for constrained hardware. It keeps only seven reusable cover views alive, loads artwork lazily through the shared bounded cache, and becomes completely static after each short Core Animation transition. Rapid wheel input does not build a long animation queue—the view redirects toward the latest selected album.
+
+## Version 1.0 Interface
+
+The final polish pass brings Standard and Classic into one visual system while preserving the character of iOS 4:
+
+- consistent row heights, spacing, typography, and secondary text;
+- a clean two-column Albums grid with equal square artwork containers;
+- matching A–Z navigation bars in Albums and Artists;
+- refined Album Detail, Songs, Favorites, Playlists, Queue, and Recent screens;
+- a tighter Standard Now Playing layout with a two-line title and unified action row;
+- aligned Classic lists and a more tactile-looking Click Wheel;
+- adaptive manual layouts for displays larger than 320×480 without Auto Layout.
+
+Light and Dark themes retain the same visual hierarchy across all of these screens.
 
 ## Light and Dark Themes
 
@@ -230,7 +263,7 @@ Touchbox remains a native offline player for music already stored on the device:
 - primary platform: iPod touch 3G / iPod3,1;
 - verified target version: iOS 4.1;
 - may also run on iOS 5 and iOS 6;
-- 320×480 non-Retina display;
+- 320×480 non-Retina reference display, with adaptive layout on larger screens;
 - ARMv7;
 - jailbreak for `.deb` installation;
 - public `MediaPlayer.framework` APIs.

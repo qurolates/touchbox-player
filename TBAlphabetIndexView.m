@@ -26,11 +26,12 @@
 }
 - (void)drawRect:(CGRect)rect {
     CGFloat itemHeight = self.bounds.size.height / MAX((CGFloat)[_titles count], 1.0f);
-    UIFont *font = [UIFont boldSystemFontOfSize:8.0f];
+    CGFloat fontSize = [_titles count] > 20 ? 8.0f : 9.0f;
+    UIFont *font = [UIFont boldSystemFontOfSize:fontSize];
     NSUInteger index;
     for (index = 0; index < [_titles count]; index++) {
         UIColor *color = ((NSInteger)index == _selectedIndex)
-            ? [TBTheme accentColor] : [TBTheme secondaryTextColor];
+            ? [TBTheme accentColor] : [TBTheme disabledTextColor];
         [color set];
         [[_titles objectAtIndex:index] drawInRect:CGRectMake(0, floorf(index * itemHeight),
             self.bounds.size.width, ceilf(itemHeight)) withFont:font

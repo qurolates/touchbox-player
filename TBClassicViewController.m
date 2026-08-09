@@ -84,20 +84,23 @@ typedef enum {
     _queuePositionLabel.frame = CGRectMake(bodyWidth - 60, 0, 52, 30);
     CGFloat rowHeight = floorf((displayHeight - 46.0f) / TBClassicVisibleRows);
     NSInteger row;
-    for (row = 0; row < TBClassicVisibleRows; row++)
+    for (row = 0; row < TBClassicVisibleRows; row++) {
         ((UILabel *)[_rowLabels objectAtIndex:(NSUInteger)row]).frame =
             CGRectMake(8, 31 + row * rowHeight, bodyWidth - 16, rowHeight);
+        ((UILabel *)[_rowAccessoryLabels objectAtIndex:(NSUInteger)row]).frame =
+            CGRectMake(bodyWidth - 26, 31 + row * rowHeight, 18, rowHeight);
+    }
     _statusLabel.frame = CGRectMake(0, displayHeight - 15, bodyWidth, 15);
     CGFloat nowHeight = displayHeight - 45.0f;
     _nowPlayingView.frame = CGRectMake(0, 30, bodyWidth, nowHeight);
     _coverFlowView.frame = CGRectMake(0, 30, bodyWidth, nowHeight);
-    CGFloat artworkSize = MIN(150.0f, 120.0f + MAX(0.0f, displayHeight - 220.0f) * 0.375f);
-    _nowPlayingArtworkView.frame = CGRectMake(8, 6, artworkSize, artworkSize);
-    CGFloat metadataX = artworkSize + 18.0f;
+    CGFloat artworkSize = MIN(140.0f, 114.0f + MAX(0.0f, displayHeight - 220.0f) * 0.325f);
+    _nowPlayingArtworkView.frame = CGRectMake(10, 7, artworkSize, artworkSize);
+    CGFloat metadataX = artworkSize + 20.0f;
     CGFloat metadataWidth = MAX(100.0f, bodyWidth - metadataX - 10.0f);
-    _nowPlayingTitleLabel.frame = CGRectMake(metadataX, 10, metadataWidth, 42);
-    _nowPlayingArtistLabel.frame = CGRectMake(metadataX, 58, metadataWidth, 20);
-    _nowPlayingAlbumLabel.frame = CGRectMake(metadataX, 80, metadataWidth, 20);
+    _nowPlayingTitleLabel.frame = CGRectMake(metadataX, 9, metadataWidth, 40);
+    _nowPlayingArtistLabel.frame = CGRectMake(metadataX, 53, metadataWidth, 19);
+    _nowPlayingAlbumLabel.frame = CGRectMake(metadataX, 74, metadataWidth, 18);
     CGFloat progressY = nowHeight - 26.0f;
     _progressFillView.superview.frame = CGRectMake(50, progressY, MAX(80.0f, bodyWidth - 100), 3);
     _nowPlayingElapsedLabel.frame = CGRectMake(5, progressY - 9, 42, 18);
@@ -159,11 +162,16 @@ typedef enum {
     _queuePositionLabel.textAlignment = UITextAlignmentRight;
     _queuePositionLabel.textColor = [TBTheme secondaryTextColor];
     _queuePositionLabel.hidden = YES; [display addSubview:_queuePositionLabel];
-    _rowLabels = [[NSMutableArray alloc] initWithCapacity:TBClassicVisibleRows]; NSInteger i;
+    _rowLabels = [[NSMutableArray alloc] initWithCapacity:TBClassicVisibleRows];
+    _rowAccessoryLabels = [[NSMutableArray alloc] initWithCapacity:TBClassicVisibleRows]; NSInteger i;
     for (i = 0; i < TBClassicVisibleRows; i++) {
         UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(8, 31 + i * 29, 304, 29)];
         label.font = [UIFont boldSystemFontOfSize:14]; label.lineBreakMode = UILineBreakModeTailTruncation;
         [display addSubview:label]; [_rowLabels addObject:label]; [label release];
+        UILabel *accessory = [[UILabel alloc] initWithFrame:CGRectMake(294, 31 + i * 29, 18, 29)];
+        accessory.backgroundColor = [UIColor clearColor]; accessory.font = [UIFont boldSystemFontOfSize:14];
+        accessory.textAlignment = UITextAlignmentCenter; accessory.text = @">";
+        [display addSubview:accessory]; [_rowAccessoryLabels addObject:accessory]; [accessory release];
     }
     _statusLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 205, 320, 15)];
     _statusLabel.backgroundColor = [TBTheme classicHeaderColor];
@@ -243,6 +251,7 @@ typedef enum {
     if (_classicSeekChanged) {
         [[TBPlayerManager sharedManager] endInteractiveSeek];
         _classicSeekChanged = NO;
+        _classicSeekPosition = 0;
     }
     _visible = NO;
     [self stopProgressTimer];
@@ -368,7 +377,8 @@ typedef enum {
     _coverFlowView.hidden = !coverFlow;
     _queuePositionLabel.hidden = !nowPlaying;
     NSInteger hiddenRow; for (hiddenRow = 0; hiddenRow < TBClassicVisibleRows; hiddenRow++)
-        ((UILabel *)[_rowLabels objectAtIndex:(NSUInteger)hiddenRow]).hidden = nowPlaying || coverFlow;
+        { ((UILabel *)[_rowLabels objectAtIndex:(NSUInteger)hiddenRow]).hidden = nowPlaying || coverFlow;
+          ((UILabel *)[_rowAccessoryLabels objectAtIndex:(NSUInteger)hiddenRow]).hidden = nowPlaying || coverFlow; }
     if (nowPlaying) { [self updateNowPlaying]; if (_visible) [self startProgressTimer]; return; }
     [self stopProgressTimer];
     NSInteger count = (NSInteger)[_currentItems count];
@@ -384,13 +394,18 @@ typedef enum {
     NSInteger row;
     for (row = 0; row < TBClassicVisibleRows; row++) {
         UILabel *label = [_rowLabels objectAtIndex:(NSUInteger)row]; NSInteger itemIndex = start + row;
+        UILabel *accessory = [_rowAccessoryLabels objectAtIndex:(NSUInteger)row];
         if (itemIndex < count) {
             BOOL selected = itemIndex == _selectedIndex; id item = [_currentItems objectAtIndex:(NSUInteger)itemIndex];
             NSString *title = [self titleForItem:item atIndex:itemIndex];
+            BOOL submenu = [self itemIsSubmenuAtIndex:itemIndex];
             label.hidden = NO; label.backgroundColor = selected ? [TBTheme selectionColor] : [UIColor clearColor];
             label.textColor = selected ? [UIColor whiteColor] : [TBTheme primaryTextColor];
-            label.text = [NSString stringWithFormat:@"  %@%@", title, [self itemIsSubmenuAtIndex:itemIndex] ? @"  >" : @""];
-        } else label.hidden = YES;
+            label.font = selected ? [UIFont boldSystemFontOfSize:14] : [UIFont systemFontOfSize:14];
+            label.text = [NSString stringWithFormat:@"  %@", title];
+            accessory.hidden = !submenu; accessory.backgroundColor = [UIColor clearColor];
+            accessory.textColor = label.textColor;
+        } else { label.hidden = YES; accessory.hidden = YES; }
     }
     _statusLabel.text = count ? [NSString stringWithFormat:@"%ld of %ld", (long)_selectedIndex + 1, (long)count]
         : ([[TBLibraryManager sharedManager] mediaItemsReady] ? @"No Items" : @"Loading Library…");
@@ -538,10 +553,19 @@ typedef enum {
 }
 - (void)updateProgress {
     if (!_visible || !self.view.window || _screenType != TBClassicScreenNowPlaying) return;
+    if (_classicSeekChanged) return;
     MPMusicPlayerController *player = [TBPlayerManager sharedManager].musicPlayer;
     NSTimeInterval duration = [[player.nowPlayingItem valueForProperty:MPMediaItemPropertyPlaybackDuration] doubleValue];
     NSTimeInterval elapsed = player.currentPlaybackTime; if (elapsed < 0) elapsed = 0;
     CGFloat fraction = duration > 0 ? MIN(1.0f, (CGFloat)(elapsed / duration)) : 0;
+    _progressFillView.frame = CGRectMake(0, 0,
+        _progressFillView.superview.bounds.size.width * fraction, 3);
+    _nowPlayingElapsedLabel.text = [self timeString:elapsed negative:NO];
+    _nowPlayingRemainingLabel.text = [self timeString:MAX(duration - elapsed, 0) negative:YES];
+}
+
+- (void)updateProgressForElapsed:(NSTimeInterval)elapsed duration:(NSTimeInterval)duration {
+    CGFloat fraction = duration > 0 ? MIN(1.0f, MAX(0.0f, (CGFloat)(elapsed / duration))) : 0;
     _progressFillView.frame = CGRectMake(0, 0,
         _progressFillView.superview.bounds.size.width * fraction, 3);
     _nowPlayingElapsedLabel.text = [self timeString:elapsed negative:NO];
@@ -613,14 +637,15 @@ typedef enum {
         MPMediaItem *item = manager.musicPlayer.nowPlayingItem;
         NSTimeInterval duration = [[item valueForProperty:MPMediaItemPropertyPlaybackDuration] doubleValue];
         if (!item || duration <= 0) return;
-        NSTimeInterval current = manager.musicPlayer.currentPlaybackTime;
-        NSTimeInterval target = current + (NSTimeInterval)steps * 3.0;
+        NSTimeInterval current = _classicSeekChanged ? _classicSeekPosition : manager.musicPlayer.currentPlaybackTime;
+        NSTimeInterval target = current + (NSTimeInterval)steps * 5.0;
         target = MAX(0.0, MIN(duration, target));
         if (fabs(target - current) < 0.5) return;
         if (!_classicSeekChanged) [manager beginInteractiveSeek];
+        _classicSeekPosition = target;
         [manager seekToTimeWithoutSaving:target];
         _classicSeekChanged = YES;
-        [self updateProgress];
+        [self updateProgressForElapsed:target duration:duration];
         return;
     }
     NSInteger count = (NSInteger)[_currentItems count]; if (!count) return;
@@ -635,6 +660,7 @@ typedef enum {
     if (_classicSeekChanged) {
         [[TBPlayerManager sharedManager] endInteractiveSeek];
         _classicSeekChanged = NO;
+        _classicSeekPosition = 0;
     }
 }
 - (void)clickWheelDidSelect:(TBClickWheelView *)wheel { [self selectCurrentItem]; }
@@ -651,7 +677,7 @@ typedef enum {
     [[NSNotificationCenter defaultCenter] removeObserver:self]; _wheelView.delegate = nil;
     [self stopProgressTimer];
     [_wheelView release]; [_coverFlowView release]; [_navigationStack release]; [_currentItems release]; [_screenTitle release];
-    [_rowLabels release]; [_titleLabel release]; [_queuePositionLabel release]; [_statusLabel release];
+    [_rowLabels release]; [_rowAccessoryLabels release]; [_titleLabel release]; [_queuePositionLabel release]; [_statusLabel release];
     [_nowPlayingView release]; [_nowPlayingArtworkView release]; [_nowPlayingTitleLabel release];
     [_nowPlayingArtistLabel release]; [_nowPlayingAlbumLabel release];
     [_nowPlayingElapsedLabel release]; [_nowPlayingRemainingLabel release];

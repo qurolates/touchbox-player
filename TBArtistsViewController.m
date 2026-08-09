@@ -31,13 +31,14 @@
 - (void)loadView {
     UIView *container = [[UIView alloc] initWithFrame:[[UIScreen mainScreen] applicationFrame]];
     container.backgroundColor = [TBTheme backgroundColor]; self.view = container; [container release];
-    CGFloat width = _selectedArtist ? self.view.bounds.size.width : MAX(0.0f, self.view.bounds.size.width - 20.0f);
+    CGFloat indexWidth = [TBTheme alphabetIndexWidth];
+    CGFloat width = _selectedArtist ? self.view.bounds.size.width : MAX(0.0f, self.view.bounds.size.width - indexWidth);
     UITableView *table = [[UITableView alloc] initWithFrame:CGRectMake(0, 0, width, self.view.bounds.size.height)
         style:UITableViewStylePlain];
     table.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight; table.dataSource = self; table.delegate = self;
     self.tableView = table; [table release]; [self.view addSubview:self.tableView];
     if (!_selectedArtist) {
-        _alphabetIndexView = [[TBAlphabetIndexView alloc] initWithFrame:CGRectMake(width, 0, 20, self.view.bounds.size.height)
+        _alphabetIndexView = [[TBAlphabetIndexView alloc] initWithFrame:CGRectMake(width, 0, indexWidth, self.view.bounds.size.height)
             titles:[TBAlphabeticIndex titlesForArtistGroups:[[TBLibraryManager sharedManager] artistGroups]]
             target:self action:@selector(alphabetIndexSelected:)];
         [self.view addSubview:_alphabetIndexView];
@@ -57,7 +58,7 @@
     if (_selectedArtist == nil) {
         _allArtistGroups = [[[TBLibraryManager sharedManager] artistGroups] retain];
         _artistGroups = [_allArtistGroups retain];
-        _searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(0, 0, self.tableView.bounds.size.width, 44)]; _searchBar.autoresizingMask = UIViewAutoresizingFlexibleWidth; _searchBar.delegate = self; _searchBar.placeholder = @"Search Artists"; self.tableView.tableHeaderView = _searchBar;
+        _searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(0, 0, self.tableView.bounds.size.width, [TBTheme searchBarHeight])]; _searchBar.autoresizingMask = UIViewAutoresizingFlexibleWidth; _searchBar.delegate = self; _searchBar.placeholder = @"Search Artists"; self.tableView.tableHeaderView = _searchBar;
         _sectionIndexMap = [[TBAlphabeticIndex sectionMapForArtistGroups:_artistGroups] retain];
         [_alphabetIndexView setTitles:[TBAlphabeticIndex titlesForArtistGroups:_artistGroups]];
         if (![[TBLibraryManager sharedManager] indexLoaded]) {
@@ -68,8 +69,8 @@
     if (_selectedArtist) {
         self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithTitle:@"Shuffle"
             style:UIBarButtonItemStyleBordered target:self action:@selector(shuffleArtist:)] autorelease];
-        UIView *header = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, self.tableView.bounds.size.width, 54)] autorelease];
-        UILabel *label = [[[UILabel alloc] initWithFrame:CGRectMake(15, 7, MAX(0.0f, self.tableView.bounds.size.width - 30), 40)] autorelease];
+        UIView *header = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, self.tableView.bounds.size.width, 50)] autorelease];
+        UILabel *label = [[[UILabel alloc] initWithFrame:CGRectMake([TBTheme contentMargin], 5, MAX(0.0f, self.tableView.bounds.size.width - [TBTheme contentMargin] * 2.0f), 40)] autorelease];
         label.autoresizingMask = UIViewAutoresizingFlexibleWidth;
         label.backgroundColor = [TBTheme backgroundColor];
         label.textColor = [TBTheme primaryTextColor];
@@ -181,7 +182,7 @@
     cell.accessoryType = UITableViewCellAccessoryNone;
     UIImageView *disclosure = (UIImageView *)cell.accessoryView;
     if (![disclosure isKindOfClass:[UIImageView class]]) {
-        disclosure = [[[UIImageView alloc] initWithFrame:CGRectMake(0, 0, 20, 28)] autorelease];
+        disclosure = [[[UIImageView alloc] initWithFrame:CGRectMake(0, 0, 20, [TBTheme compactRowHeight])] autorelease];
         disclosure.contentMode = UIViewContentModeCenter;
         cell.accessoryView = disclosure;
     }

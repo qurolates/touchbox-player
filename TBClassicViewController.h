@@ -8,6 +8,7 @@
     NSInteger _screenType;
     NSString *_screenTitle;
     NSMutableArray *_rowLabels;
+    NSMutableArray *_rowAccessoryLabels;
     UILabel *_titleLabel;
     UILabel *_queuePositionLabel;
     UILabel *_statusLabel;
@@ -28,5 +29,6 @@
     BOOL _loadingClassicPlaylist;
     BOOL _visible;
     BOOL _classicSeekChanged;
+    NSTimeInterval _classicSeekPosition;
 }
 @end

@@ -20,21 +20,21 @@
     self = [super initWithStyle:style reuseIdentifier:identifier];
     if (self) {
         self.backgroundColor = [TBTheme backgroundColor];
-        _numberLabel = [[UILabel alloc] initWithFrame:CGRectMake(12, 0, 28, 44)];
+        _numberLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, 0, 28, 48)];
         _numberLabel.backgroundColor = [UIColor clearColor];
         _numberLabel.textColor = [TBTheme secondaryTextColor];
         _numberLabel.font = [TBTheme metadataFont];
         _numberLabel.textAlignment = UITextAlignmentRight;
         [self.contentView addSubview:_numberLabel];
-        _playingMarker = [[UIImageView alloc] initWithFrame:CGRectMake(44, 8, 28, 28)];
+        _playingMarker = [[UIImageView alloc] initWithFrame:CGRectMake(40, 10, 28, 28)];
         [self.contentView addSubview:_playingMarker];
-        _trackTitleLabel = [[UILabel alloc] initWithFrame:CGRectMake(48, 0, 210, 44)];
+        _trackTitleLabel = [[UILabel alloc] initWithFrame:CGRectMake(46, 0, 210, 48)];
         _trackTitleLabel.backgroundColor = [UIColor clearColor];
         _trackTitleLabel.textColor = [TBTheme primaryTextColor];
         _trackTitleLabel.font = [TBTheme primaryFont];
         _trackTitleLabel.lineBreakMode = UILineBreakModeTailTruncation;
         [self.contentView addSubview:_trackTitleLabel];
-        _durationLabel = [[UILabel alloc] initWithFrame:CGRectMake(260, 0, 48, 44)];
+        _durationLabel = [[UILabel alloc] initWithFrame:CGRectMake(260, 0, 48, 48)];
         _durationLabel.backgroundColor = [UIColor clearColor];
         _durationLabel.textColor = [TBTheme secondaryTextColor];
         _durationLabel.font = [TBTheme metadataFont];
@@ -50,7 +50,7 @@
     _durationLabel.textColor = [TBTheme secondaryTextColor];
     _numberLabel.text = number;
     _playingMarker.image = playing ? [TBIconFactory iconNamed:@"play" active:YES] : nil;
-    _trackTitleLabel.frame = CGRectMake(playing ? 72 : 48, 0, playing ? 186 : 210, 44);
+    _trackTitleLabel.frame = CGRectMake(playing ? 68 : 46, 0, playing ? 190 : 212, 48);
     _trackTitleLabel.text = title;
     _durationLabel.text = duration;
 }
@@ -58,10 +58,13 @@
 - (void)layoutSubviews {
     [super layoutSubviews];
     CGFloat width = self.contentView.bounds.size.width;
-    _durationLabel.frame = CGRectMake(MAX(260.0f, width - 60.0f), 0, 48, 44);
-    CGFloat titleX = _playingMarker.image ? 72.0f : 48.0f;
+    CGFloat rowHeight = self.contentView.bounds.size.height;
+    _numberLabel.frame = CGRectMake(10, 0, 28, rowHeight);
+    _playingMarker.frame = CGRectMake(40, floorf((rowHeight - 28.0f) * 0.5f), 28, 28);
+    _durationLabel.frame = CGRectMake(MAX(252.0f, width - 58.0f), 0, 46, rowHeight);
+    CGFloat titleX = _playingMarker.image ? 68.0f : 46.0f;
     _trackTitleLabel.frame = CGRectMake(titleX, 0,
-        MAX(40.0f, CGRectGetMinX(_durationLabel.frame) - titleX - 2.0f), 44);
+        MAX(40.0f, CGRectGetMinX(_durationLabel.frame) - titleX - 6.0f), rowHeight);
 }
 
 - (void)dealloc {
@@ -75,7 +78,7 @@
 - (void)applyTheme {
     [super applyTheme]; UIView *header = self.tableView.tableHeaderView; header.backgroundColor = [TBTheme backgroundColor];
     if ([self.items count] && ![[self.items objectAtIndex:0] valueForProperty:MPMediaItemPropertyArtwork])
-        _albumArtworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(132, 132)];
+        _albumArtworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(128, 128)];
     BOOL primaryAssigned = NO; NSUInteger index;
     for (index = 0; index < [[header subviews] count]; index++) { UIView *view = [[header subviews] objectAtIndex:index];
         if ([view isKindOfClass:[UILabel class]]) { UILabel *label = (UILabel *)view; label.backgroundColor = [UIColor clearColor]; label.textColor = primaryAssigned ? [TBTheme secondaryTextColor] : [TBTheme primaryTextColor]; primaryAssigned = YES; }
@@ -100,6 +103,8 @@
     if (self) {
         _album = [album retain];
         self.hidesBottomBarWhenPushed = YES;
+        NSString *albumTitle = [album objectForKey:TBAlbumTitleKey];
+        if ([albumTitle length] > 20) self.title = @"Album";
     }
     return self;
 }
@@ -110,41 +115,41 @@
        that slot for UINavigationController's automatic Back button. */
     self.navigationItem.leftBarButtonItem = nil;
     [TBTheme styleTableView:self.tableView];
-    UIView *header = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, self.tableView.bounds.size.width, 246)] autorelease];
+    UIView *header = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, self.tableView.bounds.size.width, 252)] autorelease];
     header.backgroundColor = [TBTheme backgroundColor];
-    _albumArtworkView = [[UIImageView alloc] initWithFrame:CGRectMake(94, 8, 132, 132)];
+    _albumArtworkView = [[UIImageView alloc] initWithFrame:CGRectMake(96, 10, 128, 128)];
     _albumArtworkView.center = CGPointMake(header.bounds.size.width * 0.5f, _albumArtworkView.center.y);
     _albumArtworkView.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
     _albumArtworkView.contentMode = UIViewContentModeScaleAspectFit;
-    _albumArtworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(132, 132)];
+    _albumArtworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(128, 128)];
     [header addSubview:_albumArtworkView];
 
-    UILabel *title = [[[UILabel alloc] initWithFrame:CGRectMake(15, 145, 290, 23)] autorelease];
+    UILabel *title = [[[UILabel alloc] initWithFrame:CGRectMake(15, 146, 290, 23)] autorelease];
     title.backgroundColor = [UIColor clearColor];
     title.font = [TBTheme sectionTitleFont];
     title.textColor = [TBTheme primaryTextColor];
     title.textAlignment = UITextAlignmentCenter;
     title.lineBreakMode = UILineBreakModeTailTruncation;
     title.text = [_album objectForKey:TBAlbumTitleKey];
-    title.frame = CGRectMake(15, 145, MAX(0.0f, header.bounds.size.width - 30), 23);
+    title.frame = CGRectMake([TBTheme contentMargin], 146, MAX(0.0f, header.bounds.size.width - [TBTheme contentMargin] * 2.0f), 23);
     title.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     [header addSubview:title];
-    UILabel *artist = [[[UILabel alloc] initWithFrame:CGRectMake(15, 168, 290, 19)] autorelease];
+    UILabel *artist = [[[UILabel alloc] initWithFrame:CGRectMake(15, 170, 290, 18)] autorelease];
     artist.backgroundColor = [UIColor clearColor];
     artist.font = [TBTheme secondaryFont];
     artist.textColor = [TBTheme secondaryTextColor];
     artist.textAlignment = UITextAlignmentCenter;
     artist.lineBreakMode = UILineBreakModeTailTruncation;
     artist.text = [_album objectForKey:TBAlbumArtistKey];
-    artist.frame = CGRectMake(15, 168, MAX(0.0f, header.bounds.size.width - 30), 19);
+    artist.frame = CGRectMake([TBTheme contentMargin], 170, MAX(0.0f, header.bounds.size.width - [TBTheme contentMargin] * 2.0f), 18);
     artist.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     [header addSubview:artist];
-    UILabel *metadata = [[[UILabel alloc] initWithFrame:CGRectMake(15, 188, 290, 16)] autorelease];
+    UILabel *metadata = [[[UILabel alloc] initWithFrame:CGRectMake(15, 190, 290, 16)] autorelease];
     metadata.backgroundColor = [UIColor clearColor];
     metadata.font = [TBTheme metadataFont];
     metadata.textColor = [TBTheme secondaryTextColor];
     metadata.textAlignment = UITextAlignmentCenter;
-    metadata.frame = CGRectMake(15, 188, MAX(0.0f, header.bounds.size.width - 30), 16);
+    metadata.frame = CGRectMake([TBTheme contentMargin], 190, MAX(0.0f, header.bounds.size.width - [TBTheme contentMargin] * 2.0f), 16);
     metadata.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     NSString *year = nil;
     NSTimeInterval totalDuration = 0;
@@ -172,7 +177,7 @@
             (unsigned long)[self.items count], albumDuration];
     [header addSubview:metadata];
     UIButton *play = [UIButton buttonWithType:UIButtonTypeCustom];
-    play.frame = CGRectMake(129, 209, 62, 32);
+    play.frame = CGRectMake(129, 213, 62, 32);
     play.center = CGPointMake(header.bounds.size.width * 0.5f, play.center.y);
     play.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
     play.titleLabel.font = [TBTheme secondaryFont];
@@ -198,7 +203,7 @@
     _albumArtworkKey = [[NSString stringWithFormat:@"%llu", [number unsignedLongLongValue]] copy];
     UIImage *image = [[TBArtworkCache sharedCache] cachedImageForKey:_albumArtworkKey];
     if (image) _albumArtworkView.image = image;
-    else [[TBArtworkCache sharedCache] requestImageForItem:item size:CGSizeMake(132, 132)
+    else [[TBArtworkCache sharedCache] requestImageForItem:item size:CGSizeMake(128, 128)
         key:_albumArtworkKey target:self selector:@selector(albumArtworkLoaded:)];
 }
 
@@ -232,8 +237,12 @@
     return cell;
 }
 
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
+    return 48.0f;
+}
+
 - (void)didReceiveMemoryWarning {
-    _albumArtworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(132, 132)];
+    _albumArtworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(128, 128)];
     [super didReceiveMemoryWarning];
 }
 

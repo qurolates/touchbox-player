@@ -14,7 +14,7 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     [TBTheme styleTableView:self.tableView];
-    UILabel *header = [[[UILabel alloc] initWithFrame:CGRectMake(0, 0, self.tableView.bounds.size.width, 34)] autorelease];
+    UILabel *header = [[[UILabel alloc] initWithFrame:CGRectMake(0, 0, self.tableView.bounds.size.width, 28)] autorelease];
     header.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     header.text = @"  UP NEXT";
     header.font = [TBTheme metadataFont];

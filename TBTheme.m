@@ -41,8 +41,15 @@ static NSString *const TBThemeModeDefaultsKey = @"TBThemeMode";
 + (UIFont *)primaryFont { return [UIFont boldSystemFontOfSize:15]; }
 + (UIFont *)secondaryFont { return [UIFont systemFontOfSize:12]; }
 + (UIFont *)metadataFont { return [UIFont systemFontOfSize:11]; }
++ (CGFloat)contentMargin { return 12.0f; }
++ (CGFloat)listRowHeight { return 50.0f; }
++ (CGFloat)compactRowHeight { return 46.0f; }
++ (CGFloat)searchBarHeight { return 44.0f; }
++ (CGFloat)sectionHeaderHeight { return 24.0f; }
++ (CGFloat)alphabetIndexWidth { return 20.0f; }
 + (void)styleTableView:(UITableView *)tableView {
     tableView.backgroundColor = [self backgroundColor]; tableView.separatorColor = [self separatorColor];
+    tableView.rowHeight = [self listRowHeight];
     UIView *background = tableView.backgroundView; background.backgroundColor = [self backgroundColor]; NSUInteger index;
     for (index = 0; index < [[background subviews] count]; index++) { UIView *view = [[background subviews] objectAtIndex:index];
         if ([view isKindOfClass:[UILabel class]]) ((UILabel *)view).textColor = [self secondaryTextColor];

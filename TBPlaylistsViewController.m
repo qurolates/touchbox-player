@@ -8,6 +8,7 @@
 #import "TBUserPlaylistViewController.h"
 #import "TBPlaylistNameViewController.h"
 #import "TBPerformance.h"
+#import "TBIconFactory.h"
 
 @implementation TBPlaylistsViewController
 
@@ -20,7 +21,7 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     [TBTheme styleTableView:self.tableView];
-    _searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(0, 0, self.tableView.bounds.size.width, 44)]; _searchBar.autoresizingMask = UIViewAutoresizingFlexibleWidth; _searchBar.delegate = self; _searchBar.placeholder = @"Search Playlists"; self.tableView.tableHeaderView = _searchBar;
+    _searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(0, 0, self.tableView.bounds.size.width, [TBTheme searchBarHeight])]; _searchBar.autoresizingMask = UIViewAutoresizingFlexibleWidth; _searchBar.delegate = self; _searchBar.placeholder = @"Search Playlists"; self.tableView.tableHeaderView = _searchBar;
     self.navigationItem.rightBarButtonItem = [[[UIBarButtonItem alloc]
         initWithTitle:@"Player" style:UIBarButtonItemStyleBordered
         target:self action:@selector(showNowPlaying:)] autorelease];
@@ -98,6 +99,10 @@
     return section == 0 ? @"Touchbox Playlists" : @"System Playlists";
 }
 
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section {
+    return 26.0f;
+}
+
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     static NSString *identifier = @"PlaylistCell";
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:identifier];
@@ -105,6 +110,7 @@
         reuseIdentifier:identifier] autorelease];
     cell.backgroundColor = [TBTheme backgroundColor];
     cell.detailTextLabel.textColor = [TBTheme secondaryTextColor];
+    cell.detailTextLabel.font = [TBTheme secondaryFont];
     cell.textLabel.font = [TBTheme primaryFont];
     cell.textLabel.textColor = [TBTheme primaryTextColor];
     if (indexPath.section == 0) {
@@ -126,7 +132,13 @@
         cell.textLabel.textColor = [TBTheme primaryTextColor];
         cell.detailTextLabel.text = nil;
     }
-    cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+    cell.accessoryType = UITableViewCellAccessoryNone;
+    UIImageView *disclosure = (UIImageView *)cell.accessoryView;
+    if (![disclosure isKindOfClass:[UIImageView class]]) {
+        disclosure = [[[UIImageView alloc] initWithFrame:CGRectMake(0, 0, 20, [TBTheme compactRowHeight])] autorelease];
+        disclosure.contentMode = UIViewContentModeCenter; cell.accessoryView = disclosure;
+    }
+    disclosure.image = [TBIconFactory iconNamed:@"disclosure" active:NO];
     return cell;
 }
 

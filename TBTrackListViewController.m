@@ -33,7 +33,7 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     [TBTheme styleTableView:self.tableView];
-    _searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(0, 0, self.tableView.bounds.size.width, 44)];
+    _searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(0, 0, self.tableView.bounds.size.width, [TBTheme searchBarHeight])];
     _searchBar.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     _searchBar.delegate = self;
     _searchBar.placeholder = @"Search";
@@ -153,7 +153,8 @@
         cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle
                                       reuseIdentifier:identifier] autorelease];
         favoriteButton = [UIButton buttonWithType:UIButtonTypeCustom];
-        favoriteButton.frame = CGRectMake(0, 0, 44, 44);
+        favoriteButton.frame = CGRectMake(0, 0, 38, [TBTheme compactRowHeight]);
+        favoriteButton.imageEdgeInsets = UIEdgeInsetsMake(7, 7, 7, 7);
         [favoriteButton addTarget:self action:@selector(favoritePressed:)
                  forControlEvents:UIControlEventTouchUpInside];
         cell.accessoryView = favoriteButton;
@@ -184,7 +185,12 @@
     BOOL favorite = [[TBFavoritesManager sharedManager] isFavoriteItem:item];
     [favoriteButton setImage:[TBIconFactory iconNamed:@"star" active:favorite]
                     forState:UIControlStateNormal];
+    favoriteButton.alpha = favorite ? 1.0f : 0.58f;
     return cell;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
+    return [TBTheme listRowHeight];
 }
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {

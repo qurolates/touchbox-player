@@ -50,51 +50,41 @@
 
 - (void)layoutForCurrentBounds {
     CGFloat width = self.view.bounds.size.width, height = self.view.bounds.size.height;
-    CGFloat artworkSize = MIN(280.0f, 220.0f + MAX(0.0f, width - 320.0f) * 0.55f);
-    artworkSize = MIN(artworkSize, MAX(160.0f, width - 40.0f));
-    CGFloat delta = artworkSize - 220.0f;
-    CGFloat top = (width <= 320.5f && height <= 416.5f) ? 4.0f :
-        MAX(4.0f, floorf((height - (406.0f + delta)) * 0.5f));
+    CGFloat artworkSize = MIN(270.0f, 208.0f + MAX(0.0f, width - 320.0f) * 0.48f);
+    artworkSize = MIN(artworkSize, MAX(160.0f, width - 48.0f));
+    CGFloat delta = artworkSize - 208.0f;
+    CGFloat top = MAX(5.0f, floorf((height - (400.0f + delta)) * 0.5f));
     _artworkView.frame = CGRectMake(floorf((width - artworkSize) * 0.5f), top,
         artworkSize, artworkSize);
     CGFloat centerX = width * 0.5f;
-    _titleLabel.frame = CGRectMake(50, top + artworkSize + 4, MAX(120.0f, width - 100), 22);
-    _artistLabel.frame = CGRectMake(50, top + artworkSize + 26, MAX(120.0f, width - 100), 18);
-    _albumLabel.frame = CGRectMake(50, top + artworkSize + 44, MAX(120.0f, width - 100), 17);
-    _favoriteButton.frame = CGRectMake(width - 46, top + artworkSize - 3, 42, 36);
+    _titleLabel.frame = CGRectMake(38, top + artworkSize + 4, MAX(120.0f, width - 76), 34);
+    _artistLabel.frame = CGRectMake(42, top + artworkSize + 38, MAX(120.0f, width - 84), 17);
+    _albumLabel.frame = CGRectMake(42, top + artworkSize + 55, MAX(120.0f, width - 84), 16);
+    _favoriteButton.frame = CGRectMake(width - 40, top + artworkSize + 2, 34, 34);
     UIView *addToPlaylist = [self.view viewWithTag:203];
-    addToPlaylist.frame = CGRectMake(width - 52, top + artworkSize + 34, 48, 34);
-    CGFloat progressY = top + artworkSize + 66;
-    _elapsedLabel.frame = CGRectMake(4, progressY, 46, 18);
-    _remainingLabel.frame = CGRectMake(width - 50, progressY, 46, 18);
-    _progressSlider.frame = CGRectMake(46, progressY - 4, MAX(80.0f, width - 92), 24);
-    CGFloat controlsY = top + artworkSize + 94;
-    [self.view viewWithTag:201].frame = CGRectMake(centerX - 129, controlsY, 64, 44);
+    CGFloat progressY = top + artworkSize + 76;
+    _elapsedLabel.frame = CGRectMake(6, progressY, 42, 18);
+    _remainingLabel.frame = CGRectMake(width - 48, progressY, 42, 18);
+    _progressSlider.frame = CGRectMake(44, progressY - 3, MAX(80.0f, width - 88), 22);
+    CGFloat controlsY = top + artworkSize + 101;
+    [self.view viewWithTag:201].frame = CGRectMake(centerX - 144, controlsY, 64, 44);
     _playPauseButton.frame = CGRectMake(centerX - 32, controlsY, 64, 44);
-    [self.view viewWithTag:202].frame = CGRectMake(centerX + 65, controlsY, 64, 44);
-    _shuffleButton.frame = CGRectMake(centerX - 110, top + artworkSize + 146, 100, 36);
-    _repeatButton.frame = CGRectMake(centerX + 10, top + artworkSize + 146, 100, 36);
+    [self.view viewWithTag:202].frame = CGRectMake(centerX + 80, controlsY, 64, 44);
+    CGFloat actionY = top + artworkSize + 151;
+    _shuffleButton.frame = CGRectMake(centerX - 145, actionY, 90, 34);
+    addToPlaylist.frame = CGRectMake(centerX - 45, actionY, 90, 34);
+    _repeatButton.frame = CGRectMake(centerX + 55, actionY, 90, 34);
 }
 
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.view.backgroundColor = [TBTheme backgroundColor];
-    UIButton *backButton = [UIButton buttonWithType:UIButtonTypeCustom];
-    backButton.frame = CGRectMake(0, 0, 58, 30);
-    backButton.titleLabel.font = [TBTheme secondaryFont];
-    [backButton setTitle:@"Back" forState:UIControlStateNormal];
-    [backButton setTitleColor:[TBTheme accentColor] forState:UIControlStateNormal];
-    [backButton addTarget:self action:@selector(backPressed:) forControlEvents:UIControlEventTouchUpInside];
     self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc]
-        initWithCustomView:backButton] autorelease];
-    UIButton *queueButton = [UIButton buttonWithType:UIButtonTypeCustom];
-    queueButton.frame = CGRectMake(0, 0, 58, 30);
-    queueButton.titleLabel.font = [TBTheme secondaryFont];
-    [queueButton setTitle:@"Queue" forState:UIControlStateNormal];
-    [queueButton setTitleColor:[TBTheme accentColor] forState:UIControlStateNormal];
-    [queueButton addTarget:self action:@selector(queuePressed:) forControlEvents:UIControlEventTouchUpInside];
+        initWithTitle:@"Back" style:UIBarButtonItemStyleBordered
+        target:self action:@selector(backPressed:)] autorelease];
     self.navigationItem.rightBarButtonItem = [[[UIBarButtonItem alloc]
-        initWithCustomView:queueButton] autorelease];
+        initWithTitle:@"Queue" style:UIBarButtonItemStyleBordered
+        target:self action:@selector(queuePressed:)] autorelease];
     _artworkView = [[UIImageView alloc] initWithFrame:CGRectMake(50, 4, 220, 220)];
     _artworkView.backgroundColor = [TBTheme placeholderColor];
     _artworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(220, 220)];
@@ -102,8 +92,10 @@
     [self.view addSubview:_artworkView];
     _titleLabel = [[self labelWithFrame:CGRectMake(50, 228, 220, 22)
         font:[TBTheme sectionTitleFont] color:[TBTheme primaryTextColor]] retain];
+    _titleLabel.numberOfLines = 2;
     _favoriteButton = [[UIButton buttonWithType:UIButtonTypeCustom] retain];
     _favoriteButton.frame = CGRectMake(274, 221, 42, 36);
+    _favoriteButton.imageEdgeInsets = UIEdgeInsetsMake(4, 4, 4, 4);
     [_favoriteButton addTarget:self action:@selector(favoritePressed:)
               forControlEvents:UIControlEventTouchUpInside];
     [self.view addSubview:_favoriteButton];
@@ -115,7 +107,7 @@
     addToPlaylist.tag = 203;
     addToPlaylist.frame = CGRectMake(268, 258, 48, 34);
     addToPlaylist.titleLabel.font = [TBTheme metadataFont];
-    [addToPlaylist setTitle:@"+ List" forState:UIControlStateNormal];
+    [addToPlaylist setTitle:@"+ Playlist" forState:UIControlStateNormal];
     [addToPlaylist setTitleColor:[TBTheme accentColor] forState:UIControlStateNormal];
     [addToPlaylist addTarget:self action:@selector(addToPlaylistPressed:)
              forControlEvents:UIControlEventTouchUpInside];
@@ -183,10 +175,6 @@
     [(UIButton *)[self.view viewWithTag:201] setImage:[TBIconFactory iconNamed:@"previous" active:NO] forState:UIControlStateNormal];
     [(UIButton *)[self.view viewWithTag:202] setImage:[TBIconFactory iconNamed:@"next" active:NO] forState:UIControlStateNormal];
     [(UIButton *)[self.view viewWithTag:203] setTitleColor:[TBTheme accentColor] forState:UIControlStateNormal];
-    [(UIButton *)self.navigationItem.leftBarButtonItem.customView
-        setTitleColor:[TBTheme accentColor] forState:UIControlStateNormal];
-    [(UIButton *)self.navigationItem.rightBarButtonItem.customView
-        setTitleColor:[TBTheme accentColor] forState:UIControlStateNormal];
 }
 
 - (void)viewWillAppear:(BOOL)animated {

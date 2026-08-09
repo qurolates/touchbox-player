@@ -35,5 +35,11 @@ extern NSString *const TBThemeDidChangeNotification;
 + (UIFont *)primaryFont;
 + (UIFont *)secondaryFont;
 + (UIFont *)metadataFont;
++ (CGFloat)contentMargin;
++ (CGFloat)listRowHeight;
++ (CGFloat)compactRowHeight;
++ (CGFloat)searchBarHeight;
++ (CGFloat)sectionHeaderHeight;
++ (CGFloat)alphabetIndexWidth;
 + (void)styleTableView:(UITableView *)tableView;
 @end
