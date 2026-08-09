@@ -20,7 +20,7 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     [TBTheme styleTableView:self.tableView];
-    _searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(0, 0, 320, 44)]; _searchBar.delegate = self; _searchBar.placeholder = @"Search Playlists"; self.tableView.tableHeaderView = _searchBar;
+    _searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(0, 0, self.tableView.bounds.size.width, 44)]; _searchBar.autoresizingMask = UIViewAutoresizingFlexibleWidth; _searchBar.delegate = self; _searchBar.placeholder = @"Search Playlists"; self.tableView.tableHeaderView = _searchBar;
     self.navigationItem.rightBarButtonItem = [[[UIBarButtonItem alloc]
         initWithTitle:@"Player" style:UIBarButtonItemStyleBordered
         target:self action:@selector(showNowPlaying:)] autorelease];

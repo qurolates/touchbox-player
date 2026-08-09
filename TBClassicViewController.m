@@ -68,6 +68,42 @@ typedef enum {
 
 @implementation TBClassicViewController
 
+- (void)layoutClassicForBounds {
+    CGFloat width = self.view.bounds.size.width, height = self.view.bounds.size.height;
+    CGFloat bodyWidth = MIN(360.0f, width);
+    CGFloat extraHeight = MAX(0.0f, height - 480.0f);
+    CGFloat displayHeight = MIN(300.0f, 220.0f + extraHeight * 0.43f);
+    CGFloat wheelHeight = 260.0f;
+    CGFloat originX = floorf((width - bodyWidth) * 0.5f);
+    CGFloat originY = floorf(MAX(0.0f, (height - displayHeight - wheelHeight) * 0.5f));
+    UIView *display = _titleLabel.superview;
+    display.frame = CGRectMake(originX, originY, bodyWidth, displayHeight);
+    _titleLabel.frame = CGRectMake(0, 0, bodyWidth, 30);
+    _queuePositionLabel.frame = CGRectMake(bodyWidth - 60, 0, 52, 30);
+    CGFloat rowHeight = floorf((displayHeight - 46.0f) / TBClassicVisibleRows);
+    NSInteger row;
+    for (row = 0; row < TBClassicVisibleRows; row++)
+        ((UILabel *)[_rowLabels objectAtIndex:(NSUInteger)row]).frame =
+            CGRectMake(8, 31 + row * rowHeight, bodyWidth - 16, rowHeight);
+    _statusLabel.frame = CGRectMake(0, displayHeight - 15, bodyWidth, 15);
+    CGFloat nowHeight = displayHeight - 45.0f;
+    _nowPlayingView.frame = CGRectMake(0, 30, bodyWidth, nowHeight);
+    CGFloat artworkSize = MIN(150.0f, 120.0f + MAX(0.0f, displayHeight - 220.0f) * 0.375f);
+    _nowPlayingArtworkView.frame = CGRectMake(8, 6, artworkSize, artworkSize);
+    CGFloat metadataX = artworkSize + 18.0f;
+    CGFloat metadataWidth = MAX(100.0f, bodyWidth - metadataX - 10.0f);
+    _nowPlayingTitleLabel.frame = CGRectMake(metadataX, 10, metadataWidth, 42);
+    _nowPlayingArtistLabel.frame = CGRectMake(metadataX, 58, metadataWidth, 20);
+    _nowPlayingAlbumLabel.frame = CGRectMake(metadataX, 80, metadataWidth, 20);
+    CGFloat progressY = nowHeight - 26.0f;
+    _progressFillView.superview.frame = CGRectMake(50, progressY, MAX(80.0f, bodyWidth - 100), 3);
+    _nowPlayingElapsedLabel.frame = CGRectMake(5, progressY - 9, 42, 18);
+    _nowPlayingRemainingLabel.frame = CGRectMake(bodyWidth - 47, progressY - 9, 42, 18);
+    UIView *divider = [self.view viewWithTag:841];
+    divider.frame = CGRectMake(originX, originY + displayHeight - 1, bodyWidth, 1);
+    _wheelView.frame = CGRectMake(originX, originY + displayHeight, bodyWidth, wheelHeight);
+}
+
 - (id)init {
     if ((self = [super init])) {
         _navigationStack = [[NSMutableArray alloc] init];
@@ -164,6 +200,7 @@ typedef enum {
     divider.backgroundColor = [TBTheme borderColor]; divider.tag = 841; [self.view addSubview:divider];
     _wheelView = [[TBClickWheelView alloc] initWithFrame:CGRectMake(0, 220, 320, 260)];
     _wheelView.delegate = self; [self.view addSubview:_wheelView]; [self updateDisplay];
+    [self layoutClassicForBounds];
 }
 
 - (void)themeChanged:(NSNotification *)notification { if (_visible && [UIApplication sharedApplication].applicationState == UIApplicationStateActive) [self applyTheme]; }
@@ -177,7 +214,7 @@ typedef enum {
     _nowPlayingTitleLabel.textColor = [TBTheme primaryTextColor];
     MPMediaItem *themeItem = [TBPlayerManager sharedManager].musicPlayer.nowPlayingItem;
     if (![themeItem valueForProperty:MPMediaItemPropertyArtwork])
-        _nowPlayingArtworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(120, 120)];
+        _nowPlayingArtworkView.image = [TBIconFactory artworkPlaceholderWithSize:_nowPlayingArtworkView.bounds.size];
     _nowPlayingArtistLabel.textColor = [TBTheme secondaryTextColor]; _nowPlayingAlbumLabel.textColor = [TBTheme secondaryTextColor];
     _nowPlayingElapsedLabel.textColor = [TBTheme secondaryTextColor]; _nowPlayingRemainingLabel.textColor = [TBTheme secondaryTextColor];
     _progressFillView.backgroundColor = [TBTheme accentColor]; _progressFillView.superview.backgroundColor = [TBTheme borderColor];
@@ -189,6 +226,7 @@ typedef enum {
 - (void)viewWillAppear:(BOOL)animated {
     [super viewWillAppear:animated];
     _visible = YES;
+    [self layoutClassicForBounds];
     [self applyTheme];
 }
 - (void)viewDidAppear:(BOOL)animated {
@@ -489,7 +527,8 @@ typedef enum {
     NSTimeInterval duration = [[player.nowPlayingItem valueForProperty:MPMediaItemPropertyPlaybackDuration] doubleValue];
     NSTimeInterval elapsed = player.currentPlaybackTime; if (elapsed < 0) elapsed = 0;
     CGFloat fraction = duration > 0 ? MIN(1.0f, (CGFloat)(elapsed / duration)) : 0;
-    _progressFillView.frame = CGRectMake(0, 0, 220.0f * fraction, 3);
+    _progressFillView.frame = CGRectMake(0, 0,
+        _progressFillView.superview.bounds.size.width * fraction, 3);
     _nowPlayingElapsedLabel.text = [self timeString:elapsed negative:NO];
     _nowPlayingRemainingLabel.text = [self timeString:MAX(duration - elapsed, 0) negative:YES];
 }
@@ -503,12 +542,13 @@ typedef enum {
     _titleLabel.text = @"  Now Playing";
     _queuePositionLabel.text = queueIndex == NSNotFound ? @"" :
         [NSString stringWithFormat:@"%ld/%ld", (long)queueIndex + 1, (long)queueCount];
-    _nowPlayingArtworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(120, 120)];
+    CGSize artworkSize = _nowPlayingArtworkView.bounds.size;
+    _nowPlayingArtworkView.image = [TBIconFactory artworkPlaceholderWithSize:artworkSize];
     NSNumber *number = [item valueForProperty:MPMediaItemPropertyPersistentID];
-    [_nowPlayingArtworkKey release]; _nowPlayingArtworkKey = number ? [[NSString stringWithFormat:@"%llu", [number unsignedLongLongValue]] copy] : nil;
+    [_nowPlayingArtworkKey release]; _nowPlayingArtworkKey = number ? [[NSString stringWithFormat:@"classic-%llu-%u", [number unsignedLongLongValue], (unsigned)artworkSize.width] copy] : nil;
     UIImage *image = [[TBArtworkCache sharedCache] cachedImageForKey:_nowPlayingArtworkKey];
     if (image) _nowPlayingArtworkView.image = image;
-    else if (item) [[TBArtworkCache sharedCache] requestImageForItem:item size:CGSizeMake(120, 120)
+    else if (item) [[TBArtworkCache sharedCache] requestImageForItem:item size:artworkSize
         key:_nowPlayingArtworkKey target:self selector:@selector(nowPlayingArtworkLoaded:)];
     [self updateProgress];
 }

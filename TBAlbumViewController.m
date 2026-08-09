@@ -55,6 +55,15 @@
     _durationLabel.text = duration;
 }
 
+- (void)layoutSubviews {
+    [super layoutSubviews];
+    CGFloat width = self.contentView.bounds.size.width;
+    _durationLabel.frame = CGRectMake(MAX(260.0f, width - 60.0f), 0, 48, 44);
+    CGFloat titleX = _playingMarker.image ? 72.0f : 48.0f;
+    _trackTitleLabel.frame = CGRectMake(titleX, 0,
+        MAX(40.0f, CGRectGetMinX(_durationLabel.frame) - titleX - 2.0f), 44);
+}
+
 - (void)dealloc {
     [_numberLabel release]; [_trackTitleLabel release]; [_durationLabel release]; [_playingMarker release];
     [super dealloc];
@@ -101,9 +110,11 @@
        that slot for UINavigationController's automatic Back button. */
     self.navigationItem.leftBarButtonItem = nil;
     [TBTheme styleTableView:self.tableView];
-    UIView *header = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, 320, 246)] autorelease];
+    UIView *header = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, self.tableView.bounds.size.width, 246)] autorelease];
     header.backgroundColor = [TBTheme backgroundColor];
     _albumArtworkView = [[UIImageView alloc] initWithFrame:CGRectMake(94, 8, 132, 132)];
+    _albumArtworkView.center = CGPointMake(header.bounds.size.width * 0.5f, _albumArtworkView.center.y);
+    _albumArtworkView.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
     _albumArtworkView.contentMode = UIViewContentModeScaleAspectFit;
     _albumArtworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(132, 132)];
     [header addSubview:_albumArtworkView];
@@ -115,6 +126,8 @@
     title.textAlignment = UITextAlignmentCenter;
     title.lineBreakMode = UILineBreakModeTailTruncation;
     title.text = [_album objectForKey:TBAlbumTitleKey];
+    title.frame = CGRectMake(15, 145, MAX(0.0f, header.bounds.size.width - 30), 23);
+    title.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     [header addSubview:title];
     UILabel *artist = [[[UILabel alloc] initWithFrame:CGRectMake(15, 168, 290, 19)] autorelease];
     artist.backgroundColor = [UIColor clearColor];
@@ -123,12 +136,16 @@
     artist.textAlignment = UITextAlignmentCenter;
     artist.lineBreakMode = UILineBreakModeTailTruncation;
     artist.text = [_album objectForKey:TBAlbumArtistKey];
+    artist.frame = CGRectMake(15, 168, MAX(0.0f, header.bounds.size.width - 30), 19);
+    artist.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     [header addSubview:artist];
     UILabel *metadata = [[[UILabel alloc] initWithFrame:CGRectMake(15, 188, 290, 16)] autorelease];
     metadata.backgroundColor = [UIColor clearColor];
     metadata.font = [TBTheme metadataFont];
     metadata.textColor = [TBTheme secondaryTextColor];
     metadata.textAlignment = UITextAlignmentCenter;
+    metadata.frame = CGRectMake(15, 188, MAX(0.0f, header.bounds.size.width - 30), 16);
+    metadata.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     NSString *year = nil;
     NSTimeInterval totalDuration = 0;
     if ([self.items count]) {
@@ -156,6 +173,8 @@
     [header addSubview:metadata];
     UIButton *play = [UIButton buttonWithType:UIButtonTypeCustom];
     play.frame = CGRectMake(129, 209, 62, 32);
+    play.center = CGPointMake(header.bounds.size.width * 0.5f, play.center.y);
+    play.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
     play.titleLabel.font = [TBTheme secondaryFont];
     [play setTitle:@"Play" forState:UIControlStateNormal];
     [play setTitleColor:[TBTheme accentColor] forState:UIControlStateNormal];

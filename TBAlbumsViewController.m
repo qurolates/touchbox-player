@@ -26,16 +26,17 @@
     container.backgroundColor = [TBTheme backgroundColor];
     self.view = container;
     [container release];
-    UITableView *table = [[UITableView alloc] initWithFrame:CGRectMake(0, 0, 300,
+    CGFloat contentWidth = MAX(0.0f, self.view.bounds.size.width - 20.0f);
+    UITableView *table = [[UITableView alloc] initWithFrame:CGRectMake(0, 0, contentWidth,
         self.view.bounds.size.height) style:UITableViewStylePlain];
-    table.autoresizingMask = UIViewAutoresizingFlexibleHeight;
+    table.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     table.dataSource = self;
     table.delegate = self;
     self.tableView = table;
     [table release];
     [self.view addSubview:self.tableView];
     _alphabetIndexView = [[TBAlphabetIndexView alloc]
-        initWithFrame:CGRectMake(300, 0, 20, self.view.bounds.size.height)
+        initWithFrame:CGRectMake(contentWidth, 0, 20, self.view.bounds.size.height)
         titles:[TBAlphabeticIndex titlesForArtistGroups:[[TBLibraryManager sharedManager] artistGroups]]
         target:self action:@selector(alphabetIndexSelected:)];
     [self.view addSubview:_alphabetIndexView];
@@ -45,7 +46,8 @@
     [super viewDidLoad];
     [TBTheme styleTableView:self.tableView];
     self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
-    _searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(0, 0, 300, 44)];
+    _searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(0, 0, self.tableView.bounds.size.width, 44)];
+    _searchBar.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     _searchBar.delegate = self; _searchBar.placeholder = @"Search Albums";
     self.tableView.tableHeaderView = _searchBar;
     self.navigationItem.rightBarButtonItem = [[[UIBarButtonItem alloc]
@@ -135,9 +137,9 @@
 }
 
 - (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
-    UIView *header = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, 320, 28)] autorelease];
+    UIView *header = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, tableView.bounds.size.width, 28)] autorelease];
     header.backgroundColor = [TBTheme backgroundColor];
-    UILabel *label = [[[UILabel alloc] initWithFrame:CGRectMake(10, 3, 300, 22)] autorelease];
+    UILabel *label = [[[UILabel alloc] initWithFrame:CGRectMake(10, 3, MAX(0.0f, tableView.bounds.size.width - 20), 22)] autorelease];
     label.backgroundColor = [UIColor clearColor];
     label.font = [TBTheme sectionTitleFont];
     label.textColor = [TBTheme primaryTextColor];
@@ -159,6 +161,7 @@
             forControlEvents:UIControlEventTouchUpInside];
     }
     cell.backgroundColor = [TBTheme backgroundColor]; cell.contentView.backgroundColor = [TBTheme backgroundColor];
+    [cell layoutForWidth:tableView.bounds.size.width];
     NSArray *albums = [[_artistGroups objectAtIndex:(NSUInteger)indexPath.section]
         objectForKey:TBAlbumsKey];
     NSUInteger firstIndex = (NSUInteger)indexPath.row * 2;
@@ -173,7 +176,8 @@
 }
 
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
-    return 175.0f;
+    CGFloat cardWidth = floorf((tableView.bounds.size.width - 18.0f) * 0.5f);
+    return MAX(175.0f, cardWidth + 34.0f);
 }
 
 - (void)albumItemPressed:(TBAlbumItemControl *)sender {

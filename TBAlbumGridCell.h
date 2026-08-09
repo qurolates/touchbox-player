@@ -22,5 +22,6 @@
 
 @property(nonatomic, readonly) TBAlbumItemControl *leftItem;
 @property(nonatomic, readonly) TBAlbumItemControl *rightItem;
+- (void)layoutForWidth:(CGFloat)width;
 
 @end

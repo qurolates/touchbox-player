@@ -48,6 +48,34 @@
 - (void)controlPressed:(UIButton *)button { button.alpha = 0.55f; }
 - (void)controlReleased:(UIButton *)button { button.alpha = 1.0f; }
 
+- (void)layoutForCurrentBounds {
+    CGFloat width = self.view.bounds.size.width, height = self.view.bounds.size.height;
+    CGFloat artworkSize = MIN(280.0f, 220.0f + MAX(0.0f, width - 320.0f) * 0.55f);
+    artworkSize = MIN(artworkSize, MAX(160.0f, width - 40.0f));
+    CGFloat delta = artworkSize - 220.0f;
+    CGFloat top = (width <= 320.5f && height <= 416.5f) ? 4.0f :
+        MAX(4.0f, floorf((height - (406.0f + delta)) * 0.5f));
+    _artworkView.frame = CGRectMake(floorf((width - artworkSize) * 0.5f), top,
+        artworkSize, artworkSize);
+    CGFloat centerX = width * 0.5f;
+    _titleLabel.frame = CGRectMake(50, top + artworkSize + 4, MAX(120.0f, width - 100), 22);
+    _artistLabel.frame = CGRectMake(50, top + artworkSize + 26, MAX(120.0f, width - 100), 18);
+    _albumLabel.frame = CGRectMake(50, top + artworkSize + 44, MAX(120.0f, width - 100), 17);
+    _favoriteButton.frame = CGRectMake(width - 46, top + artworkSize - 3, 42, 36);
+    UIView *addToPlaylist = [self.view viewWithTag:203];
+    addToPlaylist.frame = CGRectMake(width - 52, top + artworkSize + 34, 48, 34);
+    CGFloat progressY = top + artworkSize + 66;
+    _elapsedLabel.frame = CGRectMake(4, progressY, 46, 18);
+    _remainingLabel.frame = CGRectMake(width - 50, progressY, 46, 18);
+    _progressSlider.frame = CGRectMake(46, progressY - 4, MAX(80.0f, width - 92), 24);
+    CGFloat controlsY = top + artworkSize + 94;
+    [self.view viewWithTag:201].frame = CGRectMake(centerX - 129, controlsY, 64, 44);
+    _playPauseButton.frame = CGRectMake(centerX - 32, controlsY, 64, 44);
+    [self.view viewWithTag:202].frame = CGRectMake(centerX + 65, controlsY, 64, 44);
+    _shuffleButton.frame = CGRectMake(centerX - 110, top + artworkSize + 146, 100, 36);
+    _repeatButton.frame = CGRectMake(centerX + 10, top + artworkSize + 146, 100, 36);
+}
+
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.view.backgroundColor = [TBTheme backgroundColor];
@@ -119,6 +147,7 @@
     _repeatButton = [[self buttonWithFrame:CGRectMake(170, 370, 100, 36)
         title:@"Repeat" action:@selector(repeatPressed:)] retain];
     _repeatButton.imageEdgeInsets = UIEdgeInsetsMake(4, 0, 4, 8);
+    [self layoutForCurrentBounds];
 
     NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
     MPMusicPlayerController *player = [TBPlayerManager sharedManager].musicPlayer;
@@ -143,7 +172,7 @@
     self.view.backgroundColor = [TBTheme backgroundColor]; _artworkView.backgroundColor = [TBTheme placeholderColor];
     MPMediaItem *themeItem = [TBPlayerManager sharedManager].musicPlayer.nowPlayingItem;
     if (![themeItem valueForProperty:MPMediaItemPropertyArtwork])
-        _artworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(220, 220)];
+        _artworkView.image = [TBIconFactory artworkPlaceholderWithSize:_artworkView.bounds.size];
     _titleLabel.textColor = [TBTheme primaryTextColor]; _artistLabel.textColor = [TBTheme secondaryTextColor];
     _albumLabel.textColor = [TBTheme secondaryTextColor]; _elapsedLabel.textColor = [TBTheme secondaryTextColor];
     _remainingLabel.textColor = [TBTheme secondaryTextColor];
@@ -162,6 +191,7 @@
 
 - (void)viewWillAppear:(BOOL)animated {
     [super viewWillAppear:animated];
+    [self layoutForCurrentBounds];
     [self.navigationController setToolbarHidden:YES animated:animated];
     [self updateAll];
     if (!_progressTimer) _progressTimer = [[NSTimer scheduledTimerWithTimeInterval:1.0
@@ -223,13 +253,15 @@
 - (void)requestArtworkForItem:(MPMediaItem *)item {
     [_artworkKey release];
     _artworkKey = nil;
-    _artworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(220, 220)];
+    CGSize artworkSize = _artworkView.bounds.size;
+    _artworkView.image = [TBIconFactory artworkPlaceholderWithSize:artworkSize];
     if (!item) return;
     NSNumber *number = [item valueForProperty:MPMediaItemPropertyPersistentID];
-    _artworkKey = [[NSString stringWithFormat:@"nowplaying-%llu", [number unsignedLongLongValue]] copy];
+    _artworkKey = [[NSString stringWithFormat:@"nowplaying-%llu-%u",
+        [number unsignedLongLongValue], (unsigned)artworkSize.width] copy];
     UIImage *cached = [[TBArtworkCache sharedCache] cachedImageForKey:_artworkKey];
     if (cached) _artworkView.image = cached;
-    else [[TBArtworkCache sharedCache] requestImageForItem:item size:CGSizeMake(220, 220)
+    else [[TBArtworkCache sharedCache] requestImageForItem:item size:artworkSize
         key:_artworkKey target:self selector:@selector(showArtwork:)];
 }
 
@@ -311,7 +343,7 @@
 - (void)favoritesChanged:(NSNotification *)notification { if ([self isViewLoaded] && self.view.window && [UIApplication sharedApplication].applicationState == UIApplicationStateActive) [self updateFavoriteButton]; }
 
 - (void)didReceiveMemoryWarning {
-    _artworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(220, 220)];
+    _artworkView.image = [TBIconFactory artworkPlaceholderWithSize:_artworkView.bounds.size];
     [super didReceiveMemoryWarning];
 }
 

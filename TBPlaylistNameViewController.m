@@ -16,7 +16,8 @@
     self.navigationItem.rightBarButtonItem = [[[UIBarButtonItem alloc]
         initWithBarButtonSystemItem:UIBarButtonSystemItemSave target:self
         action:@selector(save:)] autorelease];
-    _textField = [[UITextField alloc] initWithFrame:CGRectMake(15, 30, 290, 36)];
+    _textField = [[UITextField alloc] initWithFrame:CGRectMake(15, 30, MAX(0.0f, self.view.bounds.size.width - 30), 36)];
+    _textField.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     _textField.borderStyle = UITextBorderStyleRoundedRect;
     _textField.placeholder = @"Playlist Name";
     _textField.clearButtonMode = UITextFieldViewModeWhileEditing;

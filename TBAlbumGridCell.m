@@ -41,6 +41,14 @@
 - (void)showPressedState:(id)sender { self.alpha = 0.58f; }
 - (void)clearPressedState:(id)sender { self.alpha = 1.0f; }
 
+- (void)layoutSubviews {
+    [super layoutSubviews];
+    CGFloat artworkSize = MAX(1.0f, floorf(self.bounds.size.width - 8.0f));
+    _artworkView.frame = CGRectMake(4, 0, artworkSize, artworkSize);
+    _titleLabel.frame = CGRectMake(4, artworkSize + 2, artworkSize, 18);
+    _artistLabel.frame = CGRectMake(4, artworkSize + 20, artworkSize, 16);
+}
+
 - (void)configureWithAlbum:(NSDictionary *)album {
     [self resetContent];
     self.backgroundColor = [TBTheme backgroundColor];
@@ -55,12 +63,14 @@
     if ([items count] == 0) return;
     MPMediaItem *item = [items objectAtIndex:0];
     NSNumber *persistentID = [item valueForProperty:MPMediaItemPropertyPersistentID];
-    self.artworkKey = [NSString stringWithFormat:@"%llu", [persistentID unsignedLongLongValue]];
+    CGFloat artworkSize = MAX(1.0f, floorf(self.bounds.size.width - 8.0f));
+    self.artworkKey = [NSString stringWithFormat:@"album-%llu-%u",
+        [persistentID unsignedLongLongValue], (unsigned)artworkSize];
     UIImage *cached = [[TBArtworkCache sharedCache] cachedImageForKey:_artworkKey];
     if (cached) {
         _artworkView.image = cached;
     } else {
-        [[TBArtworkCache sharedCache] requestImageForItem:item size:CGSizeMake(133, 133)
+        [[TBArtworkCache sharedCache] requestImageForItem:item size:CGSizeMake(artworkSize, artworkSize)
             key:_artworkKey target:self selector:@selector(artworkLoaded:)];
     }
 }
@@ -74,7 +84,8 @@
 - (void)resetContent {
     self.album = nil;
     self.artworkKey = nil;
-    _artworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(133, 133)];
+    CGFloat artworkSize = MAX(1.0f, floorf(self.bounds.size.width - 8.0f));
+    _artworkView.image = [TBIconFactory artworkPlaceholderWithSize:CGSizeMake(artworkSize, artworkSize)];
     _titleLabel.text = nil;
     _artistLabel.text = nil;
 }
@@ -104,6 +115,19 @@
         [self.contentView addSubview:_rightItem];
     }
     return self;
+}
+
+- (void)layoutForWidth:(CGFloat)width {
+    CGFloat cardWidth = floorf((width - 18.0f) * 0.5f);
+    _leftItem.frame = CGRectMake(6, 3, cardWidth, cardWidth + 30);
+    _rightItem.frame = CGRectMake(12 + cardWidth, 3, cardWidth, cardWidth + 30);
+    [_leftItem setNeedsLayout]; [_leftItem layoutIfNeeded];
+    [_rightItem setNeedsLayout]; [_rightItem layoutIfNeeded];
+}
+
+- (void)layoutSubviews {
+    [super layoutSubviews];
+    [self layoutForWidth:self.contentView.bounds.size.width];
 }
 
 - (void)prepareForReuse {
