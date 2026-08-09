@@ -2,11 +2,35 @@
 
 [English version](README_EN.md)
 
+<p align="center">
+  <img src="Resources/icon.png" width="76" height="76" alt="Иконка Touchbox">
+</p>
+
+<p align="center">
+  <strong>Touchbox 1.0.0</strong><br>
+  Офлайн-плеер для классического iPod touch
+</p>
+
 **Touchbox 1.0.0** — первый официальный стабильный релиз.
 
 Touchbox — полноценный офлайн-плеер для локальной медиатеки iPod touch. Он объединяет функциональность современного локального музыкального плеера с отдельным Classic Mode, вдохновлённым iPod Classic и управляемым виртуальным Click Wheel.
 
 Приложение создано прежде всего для iPod touch 3G с iOS 4.1. Возможен запуск на iOS 5 и iOS 6, однако основной целевой платформой и устройством для проверки остаётся iPod3,1 / iOS 4.1.
+
+## Touchbox на реальном iPod touch 3G
+
+<table>
+  <tr>
+    <td width="33%" align="center"><img src="Resources/presentation/readme/albums_light.jpeg" alt="Сетка альбомов Touchbox в Light Theme"></td>
+    <td width="33%" align="center"><img src="Resources/presentation/readme/now_playing_standart.jpeg" alt="Standard Now Playing в Touchbox"></td>
+    <td width="33%" align="center"><img src="Resources/presentation/readme/cover_flow.jpeg" alt="Classic Cover Flow в Touchbox"></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Albums</strong><br><sub>Сетка обложек в Standard Light</sub></td>
+    <td align="center"><strong>Now Playing</strong><br><sub>Полный экран воспроизведения</sub></td>
+    <td align="center"><strong>Cover Flow</strong><br><sub>Навигация альбомов через Click Wheel</sub></td>
+  </tr>
+</table>
 
 ## Основные возможности
 

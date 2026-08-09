@@ -2,11 +2,35 @@
 
 [Русская версия](README.md)
 
+<p align="center">
+  <img src="Resources/icon.png" width="76" height="76" alt="Touchbox app icon">
+</p>
+
+<p align="center">
+  <strong>Touchbox 1.0.0</strong><br>
+  An offline player for the classic iPod touch
+</p>
+
 **Touchbox 1.0.0** is the first official stable release.
 
 Touchbox is a full-featured offline music player for the local iPod touch library. It combines the capabilities of a modern local player with a separate Classic Mode inspired by the iPod Classic and controlled through a virtual Click Wheel.
 
 The application is designed primarily for the iPod touch 3G running iOS 4.1. It may also run on iOS 5 and iOS 6, but iPod3,1 / iOS 4.1 remains the main target and device-test configuration.
+
+## Touchbox on a Real iPod touch 3G
+
+<table>
+  <tr>
+    <td width="33%" align="center"><img src="Resources/presentation/readme/albums_light.jpeg" alt="Touchbox album grid in Light Theme"></td>
+    <td width="33%" align="center"><img src="Resources/presentation/readme/now_playing_standart.jpeg" alt="Touchbox Standard Now Playing"></td>
+    <td width="33%" align="center"><img src="Resources/presentation/readme/cover_flow.jpeg" alt="Touchbox Classic Cover Flow"></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Albums</strong><br><sub>Artwork grid in Standard Light</sub></td>
+    <td align="center"><strong>Now Playing</strong><br><sub>The complete playback screen</sub></td>
+    <td align="center"><strong>Cover Flow</strong><br><sub>Click Wheel album navigation</sub></td>
+  </tr>
+</table>
 
 ## Core Features
 
